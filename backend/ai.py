@@ -1,86 +1,131 @@
 """
-Модуль интеграции с OpenRouter AI API.
-Генерирует объяснения маршрутов на русском языке.
+AI генерация объяснений для безопасных маршрутов.
+Использует OpenRouter API с улучшенными промптами.
+"""
+import os
+import httpx
+from typing import List, Dict
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+
+# Реальные данные о районах Семея для контекста
+SEMEY_DISTRICTS_INFO = """
+Районы Семея (Семипалатинска), Казахстан:
+
+ЦЕНТРАЛЬНЫЕ РАЙОНЫ (безопасные):
+- Центр (правый берег) - исторический центр, площадь Абая, Центральный парк
+- Карагайлы - новый современный район, комплекс "Арена"
+- Юность - уютный жилой район
+- Татарский край - исторический район XIX века
+- Алаш-кала - исторический район
+
+ЖИЛЫЕ РАЙОНЫ (умеренно безопасные):
+- Океан - жилой район
+- Энергетик - микрорайон с многоэтажками
+- Новостройка - жилой массив
+- Степной - микрорайон
+- Жоламан (левый берег) - частный сектор
+- Затон - район у речного порта
+
+ПРОМЫШЛЕННЫЕ РАЙОНЫ (менее безопасные):
+- Цемпоселок - район цементного завода
+- Мясокомбинат - промышленная зона
+- Обувная фабрика - промзона
+- Силикатный - заводской поселок
+- Восточный - частный сектор на окраине
 """
 
-import os
-from typing import List, Dict, Optional
-import openai
 
-# Модель через OpenRouter (можно сменить на любую доступную)
-MODEL_NAME = os.getenv("OPENROUTER_MODEL", "openrouter/owl-alpha")
-MAX_TOKENS = 500
+async def reverse_geocode(lat: float, lng: float) -> str:
+    """
+    Получает название места по координатам через Nominatim.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={
+                    "lat": lat,
+                    "lon": lng,
+                    "format": "json",
+                    "accept-language": "ru"
+                },
+                headers={"User-Agent": "SafeRoute-AI/1.0"},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("display_name", f"Координаты {lat:.4f}, {lng:.4f}")
+    except Exception as e:
+        print(f"[Geocoding error] {e}")
 
-# Клиент инициализируется лениво
-_client: Optional[openai.AsyncOpenAI] = None
-
-
-def _get_client() -> openai.AsyncOpenAI:
-    """Ленивая инициализация клиента OpenRouter API."""
-    global _client
-    if _client is None:
-        api_key = os.getenv("OPENROUTER_API_KEY")
-        if not api_key:
-            raise ValueError("OPENROUTER_API_KEY не задан")
-        _client = openai.AsyncOpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=api_key,
-            default_headers={
-                "HTTP-Referer": "https://github.com/SafeRoute-AI",
-                "X-Title": "SafeRoute AI",
-            },
-        )
-    return _client
+    return f"Координаты {lat:.4f}, {lng:.4f}"
 
 
-def _build_prompt(
-    route: List[Dict[str, float]],
+def build_improved_prompt(
+    start_name: str,
+    end_name: str,
     mode: str,
-    zones_avoided: List[Dict],
-    zones_nearby: List[Dict],
+    avoided_zones: List[Dict],
+    nearby_zones: List[Dict],
+    danger_score: float
 ) -> str:
-    """Строит промпт на основе данных маршрута."""
-
-    mode_labels = {
-        "car": "на машине",
+    """
+    Строит улучшенный промпт с реальными названиями мест.
+    """
+    mode_ru = {
+        "car": "на автомобиле",
         "child": "с ребёнком",
-        "tourist": "для туриста",
-    }
-    mode_russian = mode_labels.get(mode, mode)
+        "tourist": "для туриста"
+    }.get(mode, mode)
 
-    # Формируем описание маршрута
-    route_desc = " → ".join(
-        f"({p['lat']:.4f}, {p['lng']:.4f})" for p in route
-    )
+    # Форматируем обойдённые зоны
+    avoided_text = ""
+    if avoided_zones:
+        avoided_list = "\n".join([
+            f"  - {z['name']} (уровень опасности: {z['danger_level']}/10)"
+            for z in avoided_zones[:5]  # Максимум 5 зон
+        ])
+        avoided_text = f"\n\nОбойдённые опасные зоны:\n{avoided_list}"
 
-    # Формируем список обойдённых зон
-    avoided_desc = "\n".join(
-        f"  - {z['name']} (уровень опасности: {z['danger_level']}/10, "
-        f"расстояние: {z['distance']}м, {z.get('description', '')})"
-        for z in zones_avoided
-    ) if zones_avoided else "  (нет опасных зон на пути)"
+    # Форматируем близкие зоны
+    nearby_text = ""
+    if nearby_zones:
+        nearby_list = "\n".join([
+            f"  - {z['name']} (уровень опасности: {z['danger_level']}/10, расстояние: {z['distance']}м)"
+            for z in nearby_zones[:3]  # Максимум 3 зоны
+        ])
+        nearby_text = f"\n\nЗоны рядом с маршрутом:\n{nearby_list}"
 
-    nearby_desc = "\n".join(
-        f"  - {z['name']} (уровень опасности: {z['danger_level']}/10, "
-        f"расстояние: {z['distance']}м, {z.get('description', '')})"
-        for z in zones_nearby
-    ) if zones_nearby else "  (нет)"
+    prompt = f"""Ты - эксперт по безопасности городской среды в Семее (Казахстан). Объясни пользователю почему этот маршрут безопасен.
 
-    return f"""Ты — эксперт по безопасности маршрутов в городе Семей, Казахстан.
-Система SafeRoute AI построила безопасный маршрут для пользователя.
+МАРШРУТ:
+Откуда: {start_name}
+Куда: {end_name}
+Режим: {mode_ru}
+Общий уровень опасности маршрута: {danger_score}/10 (чем ниже, тем безопаснее)
+{avoided_text}{nearby_text}
 
-Режим: {mode_russian}
-Маршрут (координаты): {route_desc}
+КОНТЕКСТ О СЕМЕЕ:
+{SEMEY_DISTRICTS_INFO}
 
-Опасные зоны, которые маршрут успешно обошёл:
-{avoided_desc}
+ИНСТРУКЦИИ:
+1. Пиши кратко (3-5 предложений), простым языком
+2. Используй ТОЛЬКО реальные названия районов из контекста выше
+3. НЕ выдумывай несуществующие улицы или места
+4. Объясни почему маршрут безопасен (обошли опасные зоны)
+5. Дай 1 практический совет для режима "{mode_ru}"
+6. Если danger_score <= 3, скажи что маршрут очень безопасен
+7. Если danger_score 4-6, скажи что маршрут умеренно безопасен
+8. Если danger_score >= 7, предупреди о повышенной осторожности
 
-Опасные зоны рядом с маршрутом (маршрут прошёл поблизости):
-{nearby_desc}
+Пример хорошего ответа:
+"Этот маршрут проходит через центр Семея и район Карагайлы — одни из самых безопасных районов города. Мы обошли промышленную зону Цемпоселок и Мясокомбинат. Для поездки с ребёнком это оптимальный путь с хорошим освещением и людными улицами."
 
-Напиши краткое объяснение (3-5 предложений) на русском языке, почему этот маршрут
-безопасен. Упомяни конкретные районы, которые были обойдены, и дай практический
-совет. Используй простой и дружелюбный тон. НЕ используй markdown, только текст."""
+Твой ответ (только текст объяснения, без заголовков):"""
+
+    return prompt
 
 
 async def generate_route_explanation(
@@ -88,44 +133,75 @@ async def generate_route_explanation(
     mode: str,
     zones_avoided: List[Dict],
     zones_nearby: List[Dict],
+    danger_score: float = 5.0
 ) -> str:
     """
-    Генерирует объяснение маршрута с помощью OpenRouter API.
-    При ошибке возвращает fallback-сообщение.
+    Генерирует объяснение маршрута через AI с улучшенным промптом.
     """
-    prompt = _build_prompt(route, mode, zones_avoided, zones_nearby)
+    if not OPENROUTER_API_KEY:
+        return _fallback_explanation(mode, zones_avoided, danger_score)
 
     try:
-        client = _get_client()
-        response = await client.chat.completions.create(
-            model=MODEL_NAME,
-            max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}],
+        # Получаем названия начальной и конечной точек
+        start_name = await reverse_geocode(route[0]["lat"], route[0]["lng"])
+        end_name = await reverse_geocode(route[-1]["lat"], route[-1]["lng"])
+
+        # Строим улучшенный промпт
+        prompt = build_improved_prompt(
+            start_name, end_name, mode,
+            route, zones_avoided, zones_nearby, danger_score
         )
-        return response.choices[0].message.content
 
-    except ValueError:
-        # OPENROUTER_API_KEY не задан
-        return _fallback_explanation(mode, zones_avoided)
-    except (openai.APITimeoutError, openai.APIError) as e:
-        print(f"[ai.py] Ошибка OpenRouter API: {e}")
-        return _fallback_explanation(mode, zones_avoided)
+        # Запрос к OpenRouter
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "HTTP-Referer": "https://saferoute.ai",
+                    "X-Title": "SafeRoute AI",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": OPENROUTER_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 300,
+                    "temperature": 0.7
+                }
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                explanation = data["choices"][0]["message"]["content"]
+                return explanation.strip()
+            else:
+                print(f"[OpenRouter error] Status {response.status_code}: {response.text}")
+
     except Exception as e:
-        # Любая другая ошибка (несовместимость версий, сеть и т.д.)
-        print(f"[ai.py] Непредвиденная ошибка: {e}")
-        return _fallback_explanation(mode, zones_avoided)
+        print(f"[AI generation error] {e}")
+
+    return _fallback_explanation(mode, zones_avoided, danger_score)
 
 
-def _fallback_explanation(
-    mode: str, zones_avoided: List[Dict]
-) -> str:
-    """Fallback объяснение если AI API недоступен."""
-    mode_labels = {"car": "на машине", "child": "с ребёнком", "tourist": "для туриста"}
-    mode_russian = mode_labels.get(mode, mode)
-    avoided_names = ", ".join(z["name"] for z in zones_avoided[:3])
+def _fallback_explanation(mode: str, zones_avoided: List[Dict], danger_score: float) -> str:
+    """
+    Fallback объяснение если AI недоступен.
+    """
+    mode_ru = {
+        "car": "на автомобиле",
+        "child": "с ребёнком",
+        "tourist": "для туриста"
+    }.get(mode, mode)
 
-    base = f"Этот маршрут {mode_russian} построен с учётом безопасности."
-    if avoided_names:
-        base += f" Маршрут обходит районы: {avoided_names}."
-    base += " (AI-объяснение временно недоступно)"
-    return base
+    if danger_score <= 3:
+        safety = "очень безопасен"
+    elif danger_score <= 6:
+        safety = "умеренно безопасен"
+    else:
+        safety = "требует повышенной осторожности"
+
+    if zones_avoided:
+        avoided_names = ", ".join([z["name"] for z in zones_avoided[:3]])
+        return f"Этот маршрут {mode_ru} {safety} (уровень опасности: {danger_score}/10). Мы обошли опасные зоны: {avoided_names}. Будьте внимательны в пути!"
+    else:
+        return f"Этот маршрут {mode_ru} {safety} (уровень опасности: {danger_score}/10). Будьте внимательны в пути!"

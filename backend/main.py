@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routes import router, set_zones, Zone
+from routes import router, set_zones, Zone, set_districts, District
 from ml.danger_predictor import DangerPredictor
 
 # Загрузить переменные окружения из .env
@@ -38,6 +38,19 @@ async def lifespan(app: FastAPI):
     except FileNotFoundError as e:
         print(f"[WARNING] ML модель не найдена: {e}")
         app.state.predictor = None
+
+    # Загрузка районов города
+    districts_path = Path(__file__).parent / "data" / "districts.json"
+    with open(districts_path, "r", encoding="utf-8") as f:
+        raw_districts = json.load(f)
+    districts = [District(**d) for d in raw_districts["districts"]]
+    set_districts(districts)
+    print(f"[OK] Загружено {len(districts)} районов города")
+
+    # Передаём районы в ML predictor для привязки к реальным границам
+    if app.state.predictor:
+        app.state.predictor.set_districts([d.model_dump() for d in districts])
+        print(f"[OK] Данные районов переданы в ML predictor")
 
     yield
     # Shutdown: очистка ресурсов (если нужна)

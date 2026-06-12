@@ -101,7 +101,67 @@ body {
 #inputs input:focus {
     border-color: #a955ff;
 }
- 
+
+/* АВТОКОМПЛИТ ПОИСКА */
+.search-container {
+    position: relative;
+}
+
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1e1e2e;
+    border: 1px solid #444;
+    border-radius: 10px;
+    margin-top: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    display: none;
+}
+
+.search-dropdown.active {
+    display: block;
+}
+
+.search-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #2a2a3e;
+    transition: background-color 0.15s;
+}
+
+.search-item:hover {
+    background-color: #2a2a3e;
+}
+
+.search-item:last-child {
+    border-bottom: none;
+}
+
+.search-item-name {
+    font-size: 13px;
+    color: #fff;
+    margin-bottom: 2px;
+    font-weight: 600;
+}
+
+.search-item-address {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.search-loading,
+.search-empty {
+    padding: 10px 14px;
+    color: #888;
+    text-align: center;
+    font-size: 12px;
+}
+
 /* КНОПКА ПОСТРОИТЬ МАРШРУТ */
 #build-route-btn {
     width: 100%;
@@ -133,4 +193,49 @@ body {
  
 #ai-explanation.hidden {
     display: none;
+}
+
+/* ПЕРЕКЛЮЧАТЕЛЬ СЛОЁВ */
+.layer-switcher {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.layer-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border: 1px solid #444;
+    border-radius: 10px;
+    background-color: #1e1e2e;
+    color: #aaa;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.layer-btn.active {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    border-color: transparent;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.5);
+}
+
+/* ПОДПИСИ РАЙОНОВ */
+.district-label {
+    pointer-events: none;
+    text-align: center;
+}
+
+.district-label div {
+    display: inline-block;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* МАРКЕР ПРЕДСКАЗАНИЯ */
+.prediction-marker {
+    background: transparent;
+    border: none;
 }

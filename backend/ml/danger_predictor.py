@@ -169,6 +169,9 @@ class DangerPredictor:
         self.total_predictions = 0
         self.total_latency_ms = 0.0
 
+        # Данные районов (загружаются через set_districts)
+        self._districts = []
+
         # Загрузка метрик
         self._load_metrics()
 
@@ -373,6 +376,55 @@ class DangerPredictor:
 
         return results
 
+    def set_districts(self, districts: list):
+        """
+        Загружает данные районов для привязки ML к реальным границам.
+
+        Args:
+            districts: список dict с полями {id, name, danger_level, polygon}
+        """
+        self._districts = districts
+        logger.info(f"Загружено {len(districts)} районов в предиктор")
+
+    def _point_in_polygon(self, lat: float, lng: float, polygon: list) -> bool:
+        """
+        Проверяет, находится ли точка внутри полигона (ray casting).
+
+        Args:
+            lat: широта точки
+            lng: долгота точки
+            polygon: список {"lat": ..., "lng": ...}
+
+        Returns:
+            True если точка внутри полигона
+        """
+        n = len(polygon)
+        inside = False
+        j = n - 1
+        for i in range(n):
+            yi = polygon[i]["lat"]
+            xi = polygon[i]["lng"]
+            yj = polygon[j]["lat"]
+            xj = polygon[j]["lng"]
+            if ((yi > lat) != (yj > lat)) and (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi):
+                inside = not inside
+            j = i
+        return inside
+
+    def _find_district(self, lat: float, lng: float) -> Optional[Dict[str, Any]]:
+        """
+        Находит район по координатам.
+
+        Returns:
+            Словарь с данными района или None
+        """
+        if not self._districts:
+            return None
+        for district in self._districts:
+            if self._point_in_polygon(lat, lng, district["polygon"]):
+                return district
+        return None
+
     def predict_for_coordinates(
         self,
         lat: float,
@@ -383,10 +435,8 @@ class DangerPredictor:
         """
         Предсказывает опасность для конкретной точки на карте.
 
-        Автоматически определяет признаки района по координатам:
-        - Тип района (по удалённости от центра)
-        - Освещение (по времени суток)
-        - Плотность населения и камер (по типу района)
+        Использует данные реальных районов если точка попадает в полигон района.
+        Иначе — определяет признаки по расстоянию от центра.
 
         Args:
             lat: широта
@@ -403,41 +453,77 @@ class DangerPredictor:
         CITY_CENTER_LAT = 50.4111
         CITY_CENTER_LNG = 80.2275
 
-        # Расстояние от центра (приблизительно)
-        dlat = lat - CITY_CENTER_LAT
-        dlng = lng - CITY_CENTER_LNG
-        dist_deg = math.sqrt(dlat ** 2 + dlng ** 2)
-        dist_m = dist_deg * 111_000  # грубая конвертация
+        # Проверяем, попадает ли точка в реальный район
+        district = self._find_district(lat, lng)
 
-        # Определение типа района по расстоянию и направлению
-        if dist_m < 1500:
-            district_type = 0  # центр
-            cctv = 0.7
-            lighting_base = 0.8
-            pop_density = 0.6
-            incidents = 15
-            road_type = 0
-        elif dist_m < 3000:
-            district_type = 1  # жилой
-            cctv = 0.3
-            lighting_base = 0.5
-            pop_density = 0.5
-            incidents = 8
-            road_type = 1
-        elif dlng > 0.02:
-            district_type = 2  # промышленный (восток)
-            cctv = 0.15
-            lighting_base = 0.3
-            pop_density = 0.2
-            incidents = 25
-            road_type = 2
+        if district:
+            # Используем данные реального района
+            danger = district["danger_level"]
+
+            # Определяем тип района на основе danger_level
+            if danger <= 3:
+                district_type = 0  # центр/безопасный
+                cctv = 0.7
+                lighting_base = 0.8
+                pop_density = 0.6
+                incidents = max(5, 15 - danger * 2)
+                road_type = 0
+            elif danger <= 5:
+                district_type = 1  # жилой
+                cctv = 0.4
+                lighting_base = 0.6
+                pop_density = 0.5
+                incidents = 10 + danger * 2
+                road_type = 1
+            elif danger <= 7:
+                district_type = 2  # промышленный/опасный
+                cctv = 0.15
+                lighting_base = 0.3
+                pop_density = 0.25
+                incidents = 20 + danger * 3
+                road_type = 2
+            else:
+                district_type = 3  # критический
+                cctv = 0.1
+                lighting_base = 0.2
+                pop_density = 0.15
+                incidents = 35 + danger * 4
+                road_type = 3
         else:
-            district_type = 1  # жилой (по умолчанию)
-            cctv = 0.3
-            lighting_base = 0.5
-            pop_density = 0.5
-            incidents = 10
-            road_type = 2
+            # Точка вне известных районов — определяем по расстоянию
+            dlat = lat - CITY_CENTER_LAT
+            dlng = lng - CITY_CENTER_LNG
+            dist_deg = math.sqrt(dlat ** 2 + dlng ** 2)
+            dist_m = dist_deg * 111_000
+
+            if dist_m < 1500:
+                district_type = 0  # центр
+                cctv = 0.7
+                lighting_base = 0.8
+                pop_density = 0.6
+                incidents = 15
+                road_type = 0
+            elif dist_m < 3000:
+                district_type = 1  # жилой
+                cctv = 0.3
+                lighting_base = 0.5
+                pop_density = 0.5
+                incidents = 8
+                road_type = 1
+            elif dlng > 0.02:
+                district_type = 2  # промышленный (восток)
+                cctv = 0.15
+                lighting_base = 0.3
+                pop_density = 0.2
+                incidents = 25
+                road_type = 2
+            else:
+                district_type = 1  # жилой (по умолчанию)
+                cctv = 0.3
+                lighting_base = 0.5
+                pop_density = 0.5
+                incidents = 10
+                road_type = 2
 
         # Освещение зависит от времени
         if 6 <= hour <= 20:

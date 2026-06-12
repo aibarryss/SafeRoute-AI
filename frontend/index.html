@@ -28,15 +28,22 @@
             <button class="mode-btn" data-mode="tourist">🧳 Турист</button>
         </div>
  
-        <!-- Поля ввода -->
+        <!-- Поля ввода с автокомплитом -->
         <div id="inputs">
-            <input type="text" id="input-from" placeholder="📍 Откуда" />
-            <input type="text" id="input-to" placeholder="🏁 Куда" />
+            <div class="search-container">
+                <input type="text" id="input-from" placeholder="📍 Откуда" autocomplete="off" />
+                <div class="search-dropdown" id="dropdown-from"></div>
+            </div>
+            <div class="search-container">
+                <input type="text" id="input-to" placeholder="🏁 Куда" autocomplete="off" />
+                <div class="search-dropdown" id="dropdown-to"></div>
+            </div>
         </div>
  
         <!-- Кнопка построить маршрут -->
         <button id="build-route-btn">Построить маршрут</button>
- 
+
+
         <!-- Объяснение от ИИ -->
         <div id="ai-explanation" class="hidden">
             <div id="ai-text">Здесь появится объяснение маршрута...</div>

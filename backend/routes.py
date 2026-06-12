@@ -67,12 +67,22 @@ class PredictResponse(BaseModel):
     latency_ms: float = Field(..., description="Время выполнения в миллисекундах")
 
 
+class District(BaseModel):
+    """Район города с уровнем опасности."""
+    id: str
+    name: str
+    danger_level: int = Field(..., ge=1, le=10)
+    description: str = ""
+    polygon: List[Dict[str, float]]  # [{"lat": ..., "lng": ...}, ...]
+
+
 # Router и глобальное состояни
 
 router = APIRouter(prefix="/api", tags=["routes"])
 
 # Глобальное хранилище зон — загружается в main.py через set_zones()
 _zones: List[Zone] = []
+_districts: List[District] = []
 
 
 def set_zones(zones: List[Zone]) -> None:
@@ -84,6 +94,17 @@ def set_zones(zones: List[Zone]) -> None:
 def get_zones() -> List[Zone]:
     """Возвращает загруженные зоны."""
     return _zones
+
+
+def set_districts(districts: List[District]) -> None:
+    """Устанавливает данные районов (вызывается при старте сервера)."""
+    global _districts
+    _districts = districts
+
+
+def get_districts() -> List[District]:
+    """Возвращает загруженные районы."""
+    return _districts
 
 
 # Константы — параметры маршрутизации для каждого режима
@@ -385,6 +406,12 @@ async def get_zones_endpoint():
     return get_zones()
 
 
+@router.get("/districts", response_model=List[District])
+async def get_districts_endpoint():
+    """Возвращает список районов города с уровнями опасности."""
+    return get_districts()
+
+
 @router.post("/route", response_model=RouteResponse)
 async def compute_route(request: RouteRequest, req: Request):
     """
@@ -476,3 +503,92 @@ async def ml_info(req: Request):
         "feature_descriptions": predictor.get_feature_descriptions(),
         "statistics": predictor.get_statistics(),
     }
+
+
+class HeatmapRequest(BaseModel):
+    """Запрос для генерации heatmap на основе ML."""
+    hour: int = Field(12, ge=0, le=23, description="Час суток (0-23)")
+    day: int = Field(0, ge=0, le=6, description="День недели (0-6)")
+    bounds: Optional[Dict[str, float]] = Field(
+        None,
+        description="Границы карты: {north, south, east, west}"
+    )
+    grid_size: int = Field(20, ge=10, le=50, description="Размер сетки (10-50)")
+
+
+class HeatmapCell(BaseModel):
+    """Ячейка heatmap с ML предсказанием (полигон)."""
+    polygon: List[Dict[str, float]]  # 4 угла квадрата: [{lat, lng}, ...]
+    danger_level: int
+    confidence: float
+    risk_category: str
+
+
+@router.post("/ml/heatmap", response_model=List[HeatmapCell])
+async def generate_heatmap(request: HeatmapRequest, req: Request):
+    """
+    Генерирует heatmap на основе ML предсказаний.
+
+    Создаёт сетку полигонов (квадратов) и для каждого получает ML предсказание
+    уровня опасности. Полигоны покрывают всю область без промежутков.
+    """
+    predictor = getattr(req.app.state, 'predictor', None)
+    if not predictor:
+        raise HTTPException(
+            status_code=503,
+            detail="ML модель не загружена"
+        )
+
+    # Границы Семея (полный охват города)
+    if request.bounds:
+        north = request.bounds.get('north', 50.49)
+        south = request.bounds.get('south', 50.36)
+        east = request.bounds.get('east', 80.35)
+        west = request.bounds.get('west', 80.12)
+    else:
+        north, south = 50.49, 50.36
+        east, west = 80.35, 80.12
+
+    # Размер каждой ячейки
+    lat_step = (north - south) / request.grid_size
+    lng_step = (east - west) / request.grid_size
+
+    cells = []
+    for i in range(request.grid_size):
+        for j in range(request.grid_size):
+            # Координаты центра ячейки
+            center_lat = south + (i + 0.5) * lat_step
+            center_lng = west + (j + 0.5) * lng_step
+
+            # Получаем ML предсказание для центра
+            try:
+                result = predictor.predict_for_coordinates(
+                    lat=center_lat,
+                    lng=center_lng,
+                    hour=request.hour,
+                    day=request.day
+                )
+
+                # Вычисляем 4 угла квадрата
+                sw_lat = south + i * lat_step
+                sw_lng = west + j * lng_step
+                ne_lat = sw_lat + lat_step
+                ne_lng = sw_lng + lng_step
+
+                polygon = [
+                    {"lat": sw_lat, "lng": sw_lng},  # Юго-запад
+                    {"lat": ne_lat, "lng": sw_lng},  # Северо-запад
+                    {"lat": ne_lat, "lng": ne_lng},  # Северо-восток
+                    {"lat": sw_lat, "lng": ne_lng},  # Юго-восток
+                ]
+
+                cells.append(HeatmapCell(
+                    polygon=polygon,
+                    danger_level=result.danger_level,
+                    confidence=result.confidence,
+                    risk_category=result.risk_category
+                ))
+            except Exception:
+                continue
+
+    return cells
