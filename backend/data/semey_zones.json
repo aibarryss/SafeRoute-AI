@@ -1,0 +1,65 @@
+[
+  {
+    "id": "center",
+    "name": "Центр",
+    "danger_level": 3,
+    "lat": 50.4111,
+    "lng": 80.2275,
+    "radius": 800,
+    "description": "Людно, освещено, камеры наблюдения"
+  },
+  {
+    "id": "railway",
+    "name": "Железнодорожный",
+    "danger_level": 5,
+    "lat": 50.42,
+    "lng": 80.25,
+    "radius": 600,
+    "description": "Смешанный трафик, вокзал"
+  },
+  {
+    "id": "industrial_north",
+    "name": "Промышленный север",
+    "danger_level": 8,
+    "lat": 50.45,
+    "lng": 80.23,
+    "radius": 1000,
+    "description": "Мало освещения, редкие прохожие"
+  },
+  {
+    "id": "irtysh_embankment",
+    "name": "Набережная Иртыша",
+    "danger_level": 2,
+    "lat": 50.4,
+    "lng": 80.2,
+    "radius": 700,
+    "description": "Популярное место, хорошо освещено"
+  },
+  {
+    "id": "sleeping_west",
+    "name": "Спальные районы запад",
+    "danger_level": 6,
+    "lat": 50.41,
+    "lng": 80.18,
+    "radius": 900,
+    "description": "Тёмные переулки ночью"
+  },
+  {
+    "id": "shygys_market",
+    "name": "Рынок Шыгыс",
+    "danger_level": 5,
+    "lat": 50.415,
+    "lng": 80.24,
+    "radius": 500,
+    "description": "Карманники, толпа"
+  },
+  {
+    "id": "eastern_new",
+    "name": "Новостройки восток",
+    "danger_level": 4,
+    "lat": 50.42,
+    "lng": 80.27,
+    "radius": 600,
+    "description": "Новая инфраструктура, камеры"
+  }
+]

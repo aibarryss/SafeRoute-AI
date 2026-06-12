@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**SafeRoute AI** — AI-powered safe route planner for Semey, Kazakhstan. Built for Track 3 (City Safety & Social Services) of a hackathon. Users pick a travel mode (car / child / tourist), enter start and end points, and the system draws a route on a Leaflet map that avoids danger zones, with a Claude-generated explanation of why the route is safe.
+**SafeRoute AI** — AI-powered safe route planner for Semey, Kazakhstan. Built for Track 3 (City Safety & Social Services) of a hackathon. Users pick a travel mode (car / child / tourist), enter start and end points, and the system draws a route on a Leaflet map that avoids danger zones, with an AI-generated explanation of why the route is safe.
 
 All UI text and AI explanations are in Russian.
 
@@ -24,12 +24,11 @@ uvicorn main:app --reload --port 8000
 Two decoupled layers communicating over HTTP:
 
 ```text
-Frontend (HTML/JS/Leaflet)  →  Backend (FastAPI)  →  {semey_zones.json, Claude API}
+Frontend (HTML/JS/Leaflet)  →  Backend (FastAPI)  →  {semey_zones.json, OpenRouter API}
 ```
 
 - **Frontend** owns all map rendering, zone visualisation, and user interaction. No build step — plain JS with Leaflet.js from CDN.
 - **Backend** owns route computation logic and AI explanation generation. Loads zone data from `backend/data/semey_zones.json` into memory.
-- **Claude API** (`backend/ai.py`) — model: `claude-sonnet-4-6`. Receives the computed route + mode, returns a plain-language Russian explanation. Never called directly from the frontend.
 
 ## API Endpoints
 
@@ -50,7 +49,7 @@ Route mode logic:
 
 - `backend/main.py` — FastAPI app entry point, CORS setup.
 - `backend/routes.py` — `/api/zones` and `/api/route` handlers, route computation logic.
-- `backend/ai.py` — Claude API client and prompt construction.
+- `backend/ai.py` — OpenRouter API client and prompt construction.
 - `backend/data/semey_zones.json` — Synthetic danger zone data for Semey.
 - `frontend/app.js` — Map init, zone rendering, route requests, AI explanation display.
 - `frontend/index.html` — Page structure, Leaflet CSS/JS CDN includes.
