@@ -4,29 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SafeRoute AI</title>
-
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
     <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+ 
     <!-- Шапка -->
     <div id="header">
-        <h1>SafeRoute AI</h1>
+        <h1>🛡️ SafeRoute AI</h1>
+        <p>Безопасные маршруты Семея</p>
     </div>
-
+ 
     <!-- Карта -->
     <div id="map"></div>
-
-    <!-- Панель снизу — кнопки режимов, маршрут -->
+ 
+    <!-- Панель снизу -->
     <div id="panel">
-        <!-- сюда потом добавим кнопки режимов -->
+ 
+        <!-- Кнопки режимов -->
+        <div id="modes">
+            <button class="mode-btn active" data-mode="car">🚗 Машина</button>
+            <button class="mode-btn" data-mode="child">👶 Ребёнок</button>
+            <button class="mode-btn" data-mode="tourist">🧳 Турист</button>
+        </div>
+ 
+        <!-- Поля ввода -->
+        <div id="inputs">
+            <input type="text" id="input-from" placeholder="📍 Откуда" />
+            <input type="text" id="input-to" placeholder="🏁 Куда" />
+        </div>
+ 
+        <!-- Кнопка построить маршрут -->
+        <button id="build-route-btn">Построить маршрут</button>
+ 
+        <!-- Объяснение от ИИ -->
+        <div id="ai-explanation" class="hidden">
+            <div id="ai-text">Здесь появится объяснение маршрута...</div>
+        </div>
+ 
     </div>
-
-    <!-- Leaflet JS -->
+ 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script src="app.js"></script>
 </body>
 </html>
+ 
