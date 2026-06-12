@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from routes import router, set_zones, Zone
+from ml.danger_predictor import DangerPredictor
 
 # Загрузить переменные окружения из .env
 load_dotenv()
@@ -19,13 +20,25 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: загрузить данные зон из JSON."""
+    """Startup: загрузить данные зон из JSON и ML модель."""
+    # Загрузка зон
     zones_path = Path(__file__).parent / "data" / "semey_zones.json"
     with open(zones_path, "r", encoding="utf-8") as f:
         raw_zones = json.load(f)
     zones = [Zone(**z) for z in raw_zones]
     set_zones(zones)
     print(f"[OK] Zagruzheno {len(zones)} zon opasnosti")
+
+    # Загрузка ML модели
+    try:
+        predictor = DangerPredictor(cache_enabled=True)
+        app.state.predictor = predictor
+        accuracy = predictor.metrics.get('accuracy', 'N/A')
+        print(f"[OK] ML модель загружена (accuracy={accuracy})")
+    except FileNotFoundError as e:
+        print(f"[WARNING] ML модель не найдена: {e}")
+        app.state.predictor = None
+
     yield
     # Shutdown: очистка ресурсов (если нужна)
 
@@ -53,9 +66,15 @@ app.include_router(router)
 @app.get("/", tags=["health"])
 async def health_check():
     """Health check — проверка работоспособности сервера."""
+    predictor = app.state.predictor
+    ml_status = "loaded" if predictor else "not_loaded"
+    ml_accuracy = predictor.metrics.get('accuracy') if predictor else None
+
     return {
         "status": "ok",
         "service": "SafeRoute AI API",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "zones_loaded": True,
+        "ml_model": ml_status,
+        "ml_accuracy": ml_accuracy,
     }
