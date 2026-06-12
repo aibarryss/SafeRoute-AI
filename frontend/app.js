@@ -1,35 +1,52 @@
+// Backend URL (бэкенд на порту 8000)
+const API_BASE = 'http://localhost:8000';
+
 // 1. Создаём карту, центр — Семей
 const map = L.map('map').setView([50.4111, 80.2275], 13);
 
-// 2. Подключаем тайлы OpenStreetMap (сами карты)
+// 2. Подключаем тайлы OpenStreetMap
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '© OpenStreetMap'
 }).addTo(map);
 
-// 3. Хардкод данные по районам Семея
-const zones = [
-    { name: "Центр",        lat: 50.4111, lng: 80.2275, danger: 3 },
-    { name: "Промзона",     lat: 50.4300, lng: 80.2500, danger: 8 },
-    { name: "Набережная",   lat: 50.4050, lng: 80.2100, danger: 2 },
-    { name: "Спальный р-н", lat: 50.3950, lng: 80.2400, danger: 6 },
-    { name: "Рынок Шыгыс", lat: 50.4200, lng: 80.2600, danger: 5 },
-];
-
-// 4. Функция: уровень опасности → цвет
-function getColor(danger) {
-    if (danger <= 3) return 'green';
-    if (danger <= 6) return 'orange';
+// 3. Функция: уровень опасности → цвет
+function getColor(dangerLevel) {
+    if (dangerLevel <= 3) return 'green';
+    if (dangerLevel <= 6) return 'orange';
     return 'red';
 }
 
-// 5. Рисуем круги на карте
-zones.forEach(zone => {
-    L.circle([zone.lat, zone.lng], {
-        color: getColor(zone.danger),
-        fillColor: getColor(zone.danger),
-        fillOpacity: 0.4,
-        radius: 600  // метры
-    })
-    .bindPopup(`<b>${zone.name}</b><br>Опасность: ${zone.danger}/10`)
-    .addTo(map);
-});
+// 4. Загружаем зоны с бэкенда
+async function loadZones() {
+    try {
+        const response = await fetch(`${API_BASE}/api/zones`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const zones = await response.json();
+
+        // 5. Рисуем зоны на карте
+        zones.forEach(zone => {
+            L.circle([zone.lat, zone.lng], {
+                color: getColor(zone.danger_level),
+                fillColor: getColor(zone.danger_level),
+                fillOpacity: 0.4,
+                radius: zone.radius
+            })
+            .bindPopup(`
+                <b>${zone.name}</b><br>
+                Опасность: ${zone.danger_level}/10<br>
+                <small>${zone.description || ''}</small>
+            `)
+            .addTo(map);
+        });
+
+        console.log(`[OK] Загружено ${zones.length} зон`);
+
+    } catch (error) {
+        console.error('[ERROR] Не удалось загрузить зоны:', error);
+        alert('Не удалось загрузить зоны опасности. Убедитесь что бэкенд запущен на порту 8000');
+    }
+}
+
+// Загружаем зоны при старте
+loadZones();
