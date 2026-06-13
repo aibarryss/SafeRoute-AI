@@ -1,0 +1,7 @@
+frontend/
+backup_design/
+tools/
+scripts/
+.claude/
+.env
+.env.example
