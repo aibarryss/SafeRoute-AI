@@ -7,23 +7,32 @@ let currentMode = "car";
 let TWOGIS_API_KEY = null;
 let map = null; // Глобальная переменная карты
 
-// Получаем 2GIS ключ с бэкенда (с fallback для разработки)
+// Получаем 2GIS ключ с бэкенда (с dev-only fallback)
 async function loadConfig() {
+  const IS_DEV = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   try {
     const response = await fetch(`${API_BASE}/api/config`);
     const config = await response.json();
     TWOGIS_API_KEY = config.twogis_api_key;
 
-    // Если бэкенд вернул пустой ключ — используем fallback
     if (!TWOGIS_API_KEY) {
-      console.warn("⚠️ 2GIS API ключ пуст. Используйте .env файл для настройки.");
-      TWOGIS_API_KEY = "2db79fdb-a7bc-43c4-8e90-5ca828ef5449"; // Только для разработки!
+      if (IS_DEV) {
+        console.warn("⚠️ 2GIS ключ пуст от backend. Используется dev-only fallback. Настройте TWOGIS_API_KEY в .env для продакшена.");
+        TWOGIS_API_KEY = "2db79fdb-a7bc-43c4-8e90-5ca828ef5449";
+      } else {
+        console.error("❌ 2GIS API ключ не настроен. Добавьте TWOGIS_API_KEY в backend/.env");
+        throw new Error("2GIS API key not configured");
+      }
     }
     return TWOGIS_API_KEY;
   } catch (error) {
-    console.warn("⚠️ Бэкенд недоступен, используется fallback ключ (только для разработки)");
-    TWOGIS_API_KEY = "2db79fdb-a7bc-43c4-8e90-5ca828ef5449"; // Только для разработки!
-    return TWOGIS_API_KEY;
+    if (IS_DEV) {
+      console.warn("⚠️ Бэкенд недоступен. Используется dev-only fallback ключ.");
+      TWOGIS_API_KEY = "2db79fdb-a7bc-43c4-8e90-5ca828ef5449";
+      return TWOGIS_API_KEY;
+    }
+    console.error("❌ Бэкенд недоступен. Убедитесь что backend запущен и .env настроен");
+    throw error;
   }
 }
 
@@ -32,7 +41,12 @@ async function initMap() {
   console.log("🗺️ Инициализация карты 2GIS...");
 
   if (!TWOGIS_API_KEY) {
-    await loadConfig();
+    try {
+      await loadConfig();
+    } catch (error) {
+      console.error("❌ Не удалось загрузить конфигурацию:", error);
+      return null;
+    }
   }
 
   if (!TWOGIS_API_KEY) {
@@ -47,7 +61,6 @@ async function initMap() {
       center: [80.2275, 50.4111], // [lng, lat] — порядок 2GIS!
       zoom: 13,
       key: TWOGIS_API_KEY,
-      style: "c080bb6a-8134-4623-9aa9-446e2f3866c6", // тёмный стиль (опционально)
     });
 
     console.log("✓ Объект карты создан");
@@ -294,6 +307,17 @@ function translateRiskCategory(category) {
   return translations[category] || category;
 }
 
+// Sanitizes user/server-supplied text to prevent XSS
+function escapeHtml(str) {
+  if (typeof str !== "string") return String(str);
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // Конвертирует HEX в RGBA (для заливки полигонов)
 function hexToRgba(hex, alpha) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -326,12 +350,13 @@ document.getElementById("build-route-btn").addEventListener("click", async () =>
     return;
   }
 
+  // Fetch route data from backend
+  let data;
   try {
-    // Передаём текущее время для ML-прогноза
     const now = new Date();
     const hour = now.getHours();
-    const day = now.getDay();  // 0=Sunday, нужно преобразовать в 0=Monday
-    const dayOfWeek = day === 0 ? 6 : day - 1;  // Преобразуем: 0=Пн, 6=Вс
+    const day = now.getDay();
+    const dayOfWeek = day === 0 ? 6 : day - 1;
 
     const response = await fetch(`${API_BASE}/api/route`, {
       method: "POST",
@@ -345,97 +370,114 @@ document.getElementById("build-route-btn").addEventListener("click", async () =>
       }),
     });
 
-    const data = await response.json();
-
-    // Удаляем старый маршрут
-    if (routeObject) {
-      routeObject.destroy();
-      routeObject = null;
-    }
-
-    // Если маршрут невозможно построить - показываем предупреждение и не рисуем линию
-    if (!data.route_buildable) {
-      showMapToast("Невозможно построить безопасный маршрут. Измените точки старта/финиша.");
-      const explanationDiv = document.getElementById("ai-explanation");
-      explanationDiv.classList.remove("hidden");
-      explanationDiv.innerHTML = `
-        <div style="margin-bottom: 12px;">
-          <b style="font-size: 16px;">🚨 Маршрут невозможно построить</b>
-        </div>
-        <div style="background: rgba(255,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 12px; border: 2px solid #F44336;">
-          <div style="font-size: 13px; line-height: 1.6;">
-            ${data.warnings.join('<br>')}
-          </div>
-        </div>
-        <div style="font-size: 12px; color: #aaa;">
-          Попробуйте выбрать другие точки старта и финиша, избегая опасных районов.
-        </div>
-      `;
+    if (!response.ok) {
+      showMapToast(`Ошибка сервера: ${response.status}`);
       return;
     }
 
-    // Цвет линии в зависимости от уровня опасности
-    const routeColor =
-      data.danger_score <= 3
-        ? "#4CAF50" // Зеленый - безопасно
-        : data.danger_score <= 6
-          ? "#FF9800" // Оранжевый - средне
-          : "#F44336"; // Красный - опасно
+    data = await response.json();
+  } catch (error) {
+    console.error("Ошибка запроса к серверу:", error);
+    showMapToast("Не удалось подключиться к серверу. Убедитесь что бэкенд запущен.");
+    return;
+  }
 
-    // Рисуем полилинию маршрута
-    routeObject = new mapgl.Polyline(map, {
-      coordinates: data.route.map((p) => [p.lng, p.lat]), // [lng, lat]!
-      width: 5,
-      color: routeColor,
-    });
+  // Удаляем старый маршрут
+  if (routeObject) {
+    routeObject.destroy();
+    routeObject = null;
+  }
 
-    // Показать информацию о безопасности маршрута
-    const safetyLevel =
-      data.danger_score <= 3
-        ? "БЕЗОПАСНЫЙ"
-        : data.danger_score <= 6
-          ? "СРЕДНЕЙ ОПАСНОСТИ"
-          : "ОПАСНЫЙ";
+  // Defensive checks
+  const warnings = Array.isArray(data.warnings) ? data.warnings.map(escapeHtml) : [];
+  const aiExplanation = escapeHtml(data.ai_explanation || "");
+  const dangerScore = typeof data.danger_score === "number" ? data.danger_score : 5;
 
-    const safetyIcon =
-      data.danger_score <= 3 ? "✅" : data.danger_score <= 6 ? "⚠️" : "🚨";
-
-    // Формируем HTML для предупреждений
-    const warningsHTML = data.warnings.length > 0
-      ? `<div style="background: rgba(255,152,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 12px; border: 2px solid #FF9800;">
-           <div style="font-size: 13px; line-height: 1.6; color: #FFA726;">
-             ${data.warnings.join('<br>')}
-           </div>
-         </div>`
-      : '';
-
+  // Если маршрут невозможно построить
+  if (data.route_buildable === false) {
+    showMapToast("Невозможно построить безопасный маршрут. Измените точки старта/финиша.");
     const explanationDiv = document.getElementById("ai-explanation");
     explanationDiv.classList.remove("hidden");
     explanationDiv.innerHTML = `
       <div style="margin-bottom: 12px;">
-        <b style="font-size: 16px;">${safetyIcon} Маршрут: ${safetyLevel}</b>
+        <b style="font-size: 16px;">🚨 Маршрут невозможно построить</b>
       </div>
-      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; margin-bottom: 12px;">
-        <div style="font-size: 13px; margin-bottom: 4px;">
-          <b>Уровень опасности:</b> ${data.danger_score.toFixed(1)}/10
-        </div>
-        <div style="font-size: 12px; color: #aaa;">
-          Режим: ${
-            currentMode === "car"
-              ? "🚗 Автомобиль"
-              : currentMode === "child"
-                ? "👶 С ребёнком"
-                : "🧳 Турист"
-          }
+      <div style="background: rgba(255,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 12px; border: 2px solid #F44336;">
+        <div style="font-size: 13px; line-height: 1.6;">
+          ${warnings.join('<br>')}
         </div>
       </div>
-      ${warningsHTML}
-      <div style="font-size: 13px; line-height: 1.6;">
-        ${data.ai_explanation}
+      <div style="font-size: 12px; color: #aaa;">
+        Попробуйте выбрать другие точки старта и финиша, избегая опасных районов.
       </div>
     `;
+    return;
+  }
 
-    // Автоматически масштабируем карту на весь маршрут
+  // Цвет линии в зависимости от уровня опасности
+  const routeColor =
+    dangerScore <= 3
+      ? "#4CAF50"
+      : dangerScore <= 6
+        ? "#FF9800"
+        : "#F44336";
+
+  // Рисуем полилинию маршрута
+  if (data.route && data.route.length > 0) {
+    routeObject = new mapgl.Polyline(map, {
+      coordinates: data.route.map((p) => [p.lng, p.lat]),
+      width: 5,
+      color: routeColor,
+    });
+  }
+
+  // Показать информацию о безопасности маршрута
+  const safetyLevel =
+    dangerScore <= 3
+      ? "БЕЗОПАСНЫЙ"
+      : dangerScore <= 6
+        ? "СРЕДНЕЙ ОПАСНОСТИ"
+        : "ОПАСНЫЙ";
+
+  const safetyIcon =
+    dangerScore <= 3 ? "✅" : dangerScore <= 6 ? "⚠️" : "🚨";
+
+  const warningsHTML = warnings.length > 0
+    ? `<div style="background: rgba(255,152,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 12px; border: 2px solid #FF9800;">
+         <div style="font-size: 13px; line-height: 1.6; color: #FFA726;">
+           ${warnings.join('<br>')}
+         </div>
+       </div>`
+    : '';
+
+  const explanationDiv = document.getElementById("ai-explanation");
+  explanationDiv.classList.remove("hidden");
+  explanationDiv.innerHTML = `
+    <div style="margin-bottom: 12px;">
+      <b style="font-size: 16px;">${safetyIcon} Маршрут: ${safetyLevel}</b>
+    </div>
+    <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+      <div style="font-size: 13px; margin-bottom: 4px;">
+        <b>Уровень опасности:</b> ${dangerScore.toFixed(1)}/10
+      </div>
+      <div style="font-size: 12px; color: #aaa;">
+        Режим: ${
+          currentMode === "car"
+            ? "🚗 Автомобиль"
+            : currentMode === "child"
+              ? "👶 С ребёнком"
+              : "🧳 Турист"
+        }
+      </div>
+    </div>
+    ${warningsHTML}
+    <div style="font-size: 13px; line-height: 1.6;">
+      ${aiExplanation}
+    </div>
+  `;
+
+  // Автоматически масштабируем карту на весь маршрут
+  if (data.route && data.route.length > 1) {
     const lats = data.route.map((p) => p.lat);
     const lngs = data.route.map((p) => p.lng);
     const minLat = Math.min(...lats),
@@ -444,15 +486,12 @@ document.getElementById("build-route-btn").addEventListener("click", async () =>
       maxLng = Math.max(...lngs);
 
     map.fit([
-      [minLng - 0.005, minLat - 0.005], // [lng, lat] — юго-запад
-      [maxLng + 0.005, maxLat + 0.005], // [lng, lat] — северо-восток
+      [minLng - 0.005, minLat - 0.005],
+      [maxLng + 0.005, maxLat + 0.005],
     ]);
-
-    console.log("✓ Маршрут построен:", data);
-  } catch (error) {
-    console.error("Ошибка построения маршрута:", error);
-    alert("Не удалось построить маршрут");
   }
+
+  console.log("Маршрут построен:", data);
 });
 
 // ===== ГЕОКОДИНГ ЧЕРЕЗ 2GIS API =====
@@ -520,7 +559,8 @@ async function reverseGeocode(lat, lng) {
   }
 }
 
-// Кэш результатов поиска
+// Кэш результатов поиска (LRU-подобный, с ограничением размера)
+const SEARCH_CACHE_MAX = 200;
 const searchCache = new Map();
 let searchTimeout = null;
 
@@ -568,7 +608,12 @@ async function searchAddress(query) {
 
     const results = uniqueResults.slice(0, 10);
 
-    // Сохранение в кэш
+    // Сохранение в кэш с LRU eviction
+    if (searchCache.size >= SEARCH_CACHE_MAX) {
+      // Удаляем самый старый элемент (первый ключ в Map)
+      const oldestKey = searchCache.keys().next().value;
+      searchCache.delete(oldestKey);
+    }
     searchCache.set(cacheKey, results);
     return results;
 

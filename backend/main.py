@@ -4,6 +4,7 @@ SafeRoute AI — FastAPI сервер.
 """
 
 import json
+import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -14,8 +15,17 @@ from dotenv import load_dotenv
 from routes import router, set_zones, Zone, set_districts, District
 from ml.danger_predictor import DangerPredictor
 
+logger = logging.getLogger(__name__)
+
 # Загрузить переменные окружения из .env
 load_dotenv()
+
+# Настройка logging: формат и уровень для всего приложения
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 @asynccontextmanager
@@ -27,16 +37,16 @@ async def lifespan(app: FastAPI):
         raw_zones = json.load(f)
     zones = [Zone(**z) for z in raw_zones]
     set_zones(zones)
-    print(f"[OK] Zagruzheno {len(zones)} zon opasnosti")
+    logger.info("Zagruzheno %d zon opasnosti", len(zones))
 
     # Загрузка ML модели
     try:
         predictor = DangerPredictor(cache_enabled=True)
         app.state.predictor = predictor
         accuracy = predictor.metrics.get('accuracy', 'N/A')
-        print(f"[OK] ML модель загружена (accuracy={accuracy})")
+        logger.info("ML модель загружена (accuracy=%s)", accuracy)
     except FileNotFoundError as e:
-        print(f"[WARNING] ML модель не найдена: {e}")
+        logger.warning("ML модель не найдена: %s", e)
         app.state.predictor = None
 
     # Загрузка районов города
@@ -45,12 +55,12 @@ async def lifespan(app: FastAPI):
         raw_districts = json.load(f)
     districts = [District(**d) for d in raw_districts["districts"]]
     set_districts(districts)
-    print(f"[OK] Загружено {len(districts)} районов города")
+    logger.info("Загружено %d районов города", len(districts))
 
     # Передаём районы в ML predictor для привязки к реальным границам
     if app.state.predictor:
         app.state.predictor.set_districts([d.model_dump() for d in districts])
-        print(f"[OK] Данные районов переданы в ML predictor")
+        logger.info("Данные районов переданы в ML predictor")
 
     yield
     # Shutdown: очистка ресурсов (если нужна)
@@ -63,21 +73,23 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — разрешить конкретные origins для безопасности
-# Для продакшена заменить на реальный домен фронтенда
+# CORS — restrict to configured origins only
+import os
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
+    "http://localhost:5500",      # Live Server VS Code
+    "http://127.0.0.1:5500",     # Альтернативный адрес
+    "http://localhost:8080",      # Альтернативный порт
+    "http://127.0.0.1:8080",
+    "http://localhost:3000",      # React dev server
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5500",      # Live Server VS Code
-        "http://127.0.0.1:5500",     # Альтернативный адрес
-        "http://localhost:8080",      # Альтернативный порт
-        "http://127.0.0.1:8080",
-        "http://localhost:3000",      # React dev server
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH"],  # Only methods we use
+    allow_headers=["Content-Type", "Authorization"],  # Only headers we need
 )
 
 # Подключить маршруты
