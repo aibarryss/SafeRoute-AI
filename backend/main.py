@@ -86,6 +86,7 @@ else:
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://saferoute-ai-production-f06b.up.railway.app",
+        "https://saferoute-a1.vercel.app",
     ]
 
 app.add_middleware(
