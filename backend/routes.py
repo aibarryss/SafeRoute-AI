@@ -12,8 +12,14 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Any
 from enum import Enum
 from fastapi import APIRouter, Request, HTTPException
+from dotenv import load_dotenv
+
+# Загружаем .env ПЕРЕД чтением переменных (main.py делает load_dotenv() ПОСЛЕ импорта routes.py)
+load_dotenv(Path(__file__).parent / ".env")
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 TWOGIS_API_KEY = os.getenv("TWOGIS_API_KEY")
+print(f"[routes] TWOGIS_API_KEY loaded: {'Yes' if TWOGIS_API_KEY else 'No'}")
 
 
 # Pydantic модели
@@ -814,8 +820,9 @@ async def batch_update_districts(
 @router.get("/search")
 async def search_address(q: str = ""):
     """
-    Прокси для поиска адресов через 2GIS API.
-    Ключ API хранится только на бэкенде, не передаётся на фронтенд.
+    Поиск адресов через 2GIS Geocoder API.
+    Использует специализированный геокодер (не каталог POI).
+    Ключ API хранится только на бэкенде.
     Параметр: q (совпадает с фронтендом).
     """
     if not TWOGIS_API_KEY:
@@ -826,13 +833,15 @@ async def search_address(q: str = ""):
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
+            # Используем Geocoder API вместо каталога
             response = await client.get(
-                "https://catalog.api.2gis.com/3.0/items",
+                "https://catalog.api.2gis.com/3.0/items/geocode",
                 params={
                     "q": q,
-                    "fields": "items.point,items.adm_div,items.address_name,items.name,items.full_name,items.street",
+                    "fields": "items.point,items.adm_div,items.address_name,items.name,items.full_name,items.street,items.geometry",
                     "key": TWOGIS_API_KEY,
-                    "page_size": 15
+                    "page_size": 15,
+                    "region_id": "113",  # Семей (Восточно-Казахстанская область)
                 }
             )
 
@@ -841,12 +850,12 @@ async def search_address(q: str = ""):
             else:
                 raise HTTPException(
                     status_code=response.status_code,
-                    detail=f"2GIS API error: {response.text[:200]}"
+                    detail=f"2GIS Geocoder error: {response.text[:200]}"
                 )
     except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="2GIS API timeout")
+        raise HTTPException(status_code=504, detail="2GIS Geocoder timeout")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Geocoder error: {str(e)}")
 
 
 @router.get("/geocode")
@@ -937,9 +946,42 @@ async def geocode(q: str = ""):
 @router.get("/geocode/reverse")
 async def geocode_reverse(lat: float, lng: float):
     """
-    Обратное геокодирование через Nominatim.
+    Обратное геокодирование через 2GIS Geocoder API (с fallback на Nominatim).
     Возвращает адрес по координатам (для «Моё местоположение»).
     """
+    # Основной: 2GIS Geocoder (быстрее и точнее для Казахстана)
+    if TWOGIS_API_KEY:
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                response = await client.get(
+                    "https://catalog.api.2gis.com/3.0/items/geocode",
+                    params={
+                        "q": f"{lat},{lng}",
+                        "fields": "items.point,items.adm_div,items.address_name,items.name,items.full_name,items.street",
+                        "key": TWOGIS_API_KEY,
+                    }
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    items = data.get("result", {}).get("items", [])
+                    if items:
+                        item = items[0]
+                        point = item.get("point", {})
+                        name = item.get("name", "")
+                        address = item.get("address_name", "") or item.get("full_name", "")
+                        street = item.get("street", "")
+
+                        return {
+                            "name": name or address or "Моё местоположение",
+                            "address": address or street,
+                            "lat": point.get("lat", lat),
+                            "lng": point.get("lon", lng),
+                        }
+        except Exception as e:
+            print(f"[2GIS reverse] Error: {e}")
+
+    # Fallback: Nominatim
     try:
         async with httpx.AsyncClient(timeout=8.0) as client:
             response = await client.get(

@@ -532,7 +532,7 @@ const SEMEY_BOUNDS = {
   maxLng: 80.35,
 };
 
-// Поиск адреса через Nominatim + 2GIS (объединённые результаты)
+// Поиск адреса через 2GIS Geocoder + Nominatim (объединённые результаты)
 async function searchAddress(query) {
   if (!query || query.length < 2) return [];
 
@@ -543,17 +543,17 @@ async function searchAddress(query) {
   }
 
   try {
-    // Параллельный поиск через Nominatim и 2GIS
-    const [nominatimResults, twogisResults] = await Promise.allSettled([
-      searchNominatim(query),
+    // Параллельный поиск: 2GIS основной + Nominatim как fallback
+    const [twogisResults, nominatimResults] = await Promise.allSettled([
       search2GIS(query),
+      searchNominatim(query),
     ]);
 
-    const nomResults = nominatimResults.status === "fulfilled" ? nominatimResults.value : [];
     const twoResults = twogisResults.status === "fulfilled" ? twogisResults.value : [];
+    const nomResults = nominatimResults.status === "fulfilled" ? nominatimResults.value : [];
 
-    // Объединяем: Nominatim приоритетнее (быстрее и точнее для адресов)
-    const allResults = [...nomResults, ...twoResults];
+    // Объединяем: 2GIS приоритетнее (точнее для Казахстана)
+    const allResults = [...twoResults, ...nomResults];
 
     // Убираем дубликаты по близости координат
     const uniqueResults = allResults.filter(
@@ -578,16 +578,12 @@ async function searchAddress(query) {
   }
 }
 
-// Поиск через 2GIS (как fallback, Nominatim — основной)
+// Поиск через 2GIS Geocoder API (основной метод)
 async function search2GIS(query) {
   if (!query || query.length < 2) return [];
 
   try {
-    const searchQuery = query.toLowerCase().includes("семей") || query.toLowerCase().includes("semey")
-      ? query
-      : `${query}, Семей, Казахстан`;
-
-    const url = `${API_BASE}/api/search?q=${encodeURIComponent(searchQuery)}`;
+    const url = `${API_BASE}/api/search?q=${encodeURIComponent(query)}`;
     const response = await fetch(url);
 
     if (!response.ok) return [];
@@ -595,36 +591,18 @@ async function search2GIS(query) {
     const data = await response.json();
     if (!data.result || !data.result.items) return [];
 
+    // 2GIS Geocoder уже фильтрует по region_id (Семей) на бэкенде
     return data.result.items
       .filter((item) => item.point)
-      .map((item) => {
-        const fullText = (item.full_name || item.address_name || "").toLowerCase();
-        const admDivText = (item.adm_div || []).map(d => d.name).join(" ").toLowerCase();
-        const isSemey = fullText.includes("семей") || admDivText.includes("семей") || fullText.includes("semey");
-        const inSemeyBounds =
-          item.point.lat >= SEMEY_BOUNDS.minLat &&
-          item.point.lat <= SEMEY_BOUNDS.maxLat &&
-          item.point.lon >= SEMEY_BOUNDS.minLng &&
-          item.point.lon <= SEMEY_BOUNDS.maxLng;
-
-        const address = item.address_name || item.street || item.full_name || "";
-
-        return {
-          name: item.name || item.address_name || "Неизвестное место",
-          address: address,
-          lat: item.point.lat,
-          lng: item.point.lon,
-          isSemey: isSemey,
-          inSemeyBounds: inSemeyBounds,
-          score: (isSemey ? 100 : 0) + (inSemeyBounds ? 50 : 0),
-        };
-      })
-      .sort((a, b) => b.score - a.score)
-      .filter((item) => item.isSemey || item.inSemeyBounds)
-      .map(({ name, address, lat, lng }) => ({ name, address, lat, lng }));
+      .map((item) => ({
+        name: item.name || item.address_name || "Неизвестное место",
+        address: item.address_name || item.street || item.full_name || "",
+        lat: item.point.lat,
+        lng: item.point.lon,
+      }));
 
   } catch (error) {
-    console.error("Ошибка 2GIS поиска:", error);
+    console.error("Ошибка 2GIS Geocoder:", error);
     return [];
   }
 }

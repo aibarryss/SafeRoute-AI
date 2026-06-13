@@ -1,15 +1,15 @@
 {
-  "accuracy": 0.7845,
-  "precision_macro": 0.7929,
-  "precision_weighted": 0.7832,
-  "recall_macro": 0.7925,
-  "recall_weighted": 0.7845,
-  "f1_macro": 0.7925,
-  "f1_weighted": 0.7836,
-  "mae": 0.2209,
-  "rmse": 0.4813,
-  "n_samples_train": 3711,
-  "n_samples_test": 928,
+  "accuracy": 0.6283,
+  "precision_macro": 0.6358,
+  "precision_weighted": 0.636,
+  "recall_macro": 0.6281,
+  "recall_weighted": 0.6283,
+  "f1_macro": 0.6288,
+  "f1_weighted": 0.6291,
+  "mae": 0.4093,
+  "rmse": 0.7031,
+  "n_samples_train": 3195,
+  "n_samples_test": 799,
   "n_features": 8,
   "n_classes": 10,
   "hyperparameters": {
@@ -20,23 +20,23 @@
     "min_samples_split": 20,
     "min_samples_leaf": 10
   },
-  "cv_accuracy_mean": 0.7844,
-  "cv_accuracy_std": 0.0142,
+  "cv_accuracy_mean": 0.6216,
+  "cv_accuracy_std": 0.0159,
   "cv_scores": [
-    0.782,
-    0.7938,
-    0.8059,
-    0.7655,
-    0.7749
+    0.6354,
+    0.6056,
+    0.6448,
+    0.6056,
+    0.6166
   ],
   "feature_importance": {
-    "lighting": 0.2317,
-    "population_density": 0.199,
-    "cctv_density": 0.1498,
-    "hour_of_day": 0.1396,
-    "historical_incidents": 0.1252,
-    "district_type": 0.0827,
-    "road_type": 0.0361,
-    "day_of_week": 0.036
+    "lighting": 0.2462,
+    "hour_of_day": 0.2011,
+    "population_density": 0.1653,
+    "district_type": 0.1564,
+    "cctv_density": 0.1383,
+    "historical_incidents": 0.0608,
+    "day_of_week": 0.0204,
+    "road_type": 0.0114
   }
 }

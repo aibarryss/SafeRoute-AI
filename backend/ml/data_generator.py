@@ -337,6 +337,186 @@ def generate_synthetic_data(
     return df
 
 
+def generate_district_based_data(
+    districts_path: str = "data/districts.json",
+    samples_per_district: int = 400,
+    random_state: int = 42,
+    save_path: str = None,
+    balance_strategy: str = "oversample",
+) -> pd.DataFrame:
+    """
+    Генерирует обучающие данные на основе реальных районов из districts.json.
+
+    Для каждого района:
+    1. Берёт реальный danger_level как базовый уровень
+    2. Генерирует признаки на основе типа и характеристик района
+    3. Добавляет вариации (время суток, день недели, освещение)
+    4. Применяет реалистичную формулу для вычисления danger_level с учётом времени и освещения
+
+    Args:
+        districts_path: путь к файлу districts.json
+        samples_per_district: количество примеров на каждый район
+        random_state: seed для воспроизводимости
+        save_path: путь для сохранения CSV
+        balance_strategy: стратегия балансировки классов
+
+    Returns:
+        DataFrame с признаками и целевой переменной
+    """
+    import json
+    from pathlib import Path
+
+    # Загрузка реальных данных районов
+    districts_file = Path(districts_path)
+    if not districts_file.exists():
+        raise FileNotFoundError(f"Файл районов не найден: {districts_path}")
+
+    with open(districts_file, 'r', encoding='utf-8') as f:
+        districts_data = json.load(f)
+
+    districts = districts_data.get('districts', [])
+    if not districts:
+        raise ValueError("В файле districts.json нет данных о районах")
+
+    print(f"\n[INFO] Загружено {len(districts)} районов из {districts_path}")
+
+    rng = np.random.default_rng(random_state)
+    all_samples = []
+
+    # Для каждого района генерируем обучающие примеры
+    for district in districts:
+        district_name = district['name']
+        base_danger = district['danger_level']  # Базовый уровень района
+
+        # Определяем тип района на основе danger_level
+        if base_danger <= 3:
+            district_type = 0  # центр/безопасный
+            cctv_base = 0.7
+            lighting_base = 0.8
+            pop_density_base = 0.6
+            incidents_base = 10
+            road_type_base = 0
+        elif base_danger <= 5:
+            district_type = 1  # жилой
+            cctv_base = 0.4
+            lighting_base = 0.6
+            pop_density_base = 0.5
+            incidents_base = 20
+            road_type_base = 1
+        elif base_danger <= 7:
+            district_type = 2  # промышленный/опасный
+            cctv_base = 0.2
+            lighting_base = 0.3
+            pop_density_base = 0.3
+            incidents_base = 35
+            road_type_base = 2
+        else:
+            district_type = 2  # очень опасный
+            cctv_base = 0.1
+            lighting_base = 0.2
+            pop_density_base = 0.2
+            incidents_base = 50
+            road_type_base = 2
+
+        # Генерируем вариации для этого района
+        for _ in range(samples_per_district):
+            # Время суток (0-23)
+            hour_of_day = rng.integers(0, 24)
+
+            # День недели (0-6)
+            day_of_week = rng.integers(0, 7)
+
+            # Освещение зависит от времени суток
+            if 6 <= hour_of_day <= 20:
+                lighting = lighting_base + rng.normal(0, 0.1)
+            else:
+                lighting = lighting_base * 0.3 + rng.normal(0, 0.1)
+            lighting = np.clip(lighting, 0, 1)
+
+            # CCTV плотность (с вариациями)
+            cctv_density = cctv_base + rng.normal(0, 0.15)
+            cctv_density = np.clip(cctv_density, 0, 1)
+
+            # Плотность населения зависит от времени
+            if 7 <= hour_of_day <= 9 or 17 <= hour_of_day <= 19:
+                pop_density = pop_density_base + 0.2 + rng.normal(0, 0.1)
+            elif 22 <= hour_of_day or hour_of_day <= 5:
+                pop_density = pop_density_base * 0.3 + rng.normal(0, 0.1)
+            else:
+                pop_density = pop_density_base + rng.normal(0, 0.1)
+            pop_density = np.clip(pop_density, 0, 1)
+
+            # Исторические инциденты (с вариациями)
+            historical_incidents = max(0, int(incidents_base + rng.normal(0, 10)))
+
+            # Тип дороги (с вариациями)
+            road_type = int(np.clip(road_type_base + rng.integers(-1, 2), 0, 3))
+
+            # Целевая переменная - реалистичная формула на основе базового уровня
+            # с учётом времени суток, освещения и других факторов
+            danger_level = base_danger
+
+            # Ночь увеличивает опасность
+            if 0 <= hour_of_day <= 4:
+                danger_level += 2
+            elif 22 <= hour_of_day or hour_of_day <= 5:
+                danger_level += 1
+            elif 10 <= hour_of_day <= 17:
+                danger_level -= 1  # День безопаснее
+
+            # Плохое освещение увеличивает опасность
+            if lighting < 0.4:
+                danger_level += 1
+
+            # Мало камер - опаснее
+            if cctv_density < 0.3:
+                danger_level += 1
+
+            # Мало людей ночью - опаснее
+            if pop_density < 0.3 and (hour_of_day >= 22 or hour_of_day <= 5):
+                danger_level += 1
+
+            # Много людей днём - безопаснее
+            if pop_density > 0.6 and 10 <= hour_of_day <= 17:
+                danger_level -= 1
+
+            # Ограничиваем диапазон 1-10
+            danger_level = int(np.clip(danger_level, 1, 10))
+
+            all_samples.append({
+                'hour_of_day': hour_of_day,
+                'day_of_week': day_of_week,
+                'district_type': district_type,
+                'lighting': round(float(lighting), 3),
+                'cctv_density': round(float(cctv_density), 3),
+                'population_density': round(float(pop_density), 3),
+                'historical_incidents': historical_incidents,
+                'road_type': road_type,
+                'danger_level': danger_level
+            })
+
+    # Создаём DataFrame
+    df = pd.DataFrame(all_samples)
+
+    print(f"\n[INFO] Сгенерировано {len(df)} примеров на основе {len(districts)} районов")
+    print(f"       Распределение danger_level:")
+    print(df['danger_level'].value_counts().sort_index().to_string())
+
+    # Балансировка классов
+    if balance_strategy and balance_strategy != "none":
+        print(f"\n[Балансировка] Стратегия: {balance_strategy}")
+        df = balance_classes(df, target_col="danger_level", strategy=balance_strategy, random_state=random_state)
+
+    # Сохранение в CSV
+    if save_path:
+        path = Path(save_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(path, index=False)
+        print(f"\n[OK] Данные сохранены: {path}")
+
+    return df
+
+
 def get_feature_names() -> list:
     """Возвращает список названий признаков."""
     return [

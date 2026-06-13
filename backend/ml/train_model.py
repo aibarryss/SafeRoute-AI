@@ -52,6 +52,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from ml.data_generator import (
     generate_synthetic_data,
+    generate_district_based_data,
     get_feature_names,
     FEATURE_DESCRIPTIONS,
 )
@@ -237,12 +238,13 @@ def train_and_save_model(
     random_state: int = 42,
     verbose: bool = True,
     save_plots: bool = True,
+    use_real_districts: bool = True,
 ) -> Dict[str, Any]:
     """
     Обучает модель Gradient Boosting и сохраняет её.
 
     Процесс:
-    1. Генерация синтетических данных
+    1. Генерация данных (реальных районов или синтетических)
     2. Разделение на train/test (80/20)
     3. Обучение GradientBoostingClassifier
     4. Оценка на тестовой выборке
@@ -254,6 +256,7 @@ def train_and_save_model(
         random_state: seed для воспроизводимости
         verbose: выводить ли прогресс
         save_plots: сохранять ли визуализации
+        use_real_districts: использовать реальные данные районов (рекомендуется)
 
     Returns:
         Словарь с метриками модели
@@ -265,14 +268,28 @@ def train_and_save_model(
 
     # 1. Генерация данных
     if verbose:
-        print("\n[1/6] Генерация синтетических данных...")
+        if use_real_districts:
+            print("\n[1/6] Генерация данных на основе реальных районов...")
+        else:
+            print("\n[1/6] Генерация синтетических данных...")
 
-    df = generate_synthetic_data(
-        n_samples=n_samples,
-        random_state=random_state,
-        save_path=DATA_DIR / "training_data.csv",
-        balance_strategy="oversample",
-    )
+    if use_real_districts:
+        districts_path = str(Path(__file__).parent.parent / "data" / "districts.json")
+        samples_per_district = max(100, n_samples // 20)  # ~20 районов
+        df = generate_district_based_data(
+            districts_path=districts_path,
+            samples_per_district=samples_per_district,
+            random_state=random_state,
+            save_path=DATA_DIR / "training_data_real_districts.csv",
+            balance_strategy="oversample",
+        )
+    else:
+        df = generate_synthetic_data(
+            n_samples=n_samples,
+            random_state=random_state,
+            save_path=DATA_DIR / "training_data.csv",
+            balance_strategy="oversample",
+        )
 
     # 2. Подготовка признаков
     if verbose:
