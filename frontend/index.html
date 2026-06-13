@@ -5,16 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SafeRoute AI</title>
     <link rel="stylesheet" href="style.css" />
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
   </head>
   <body>
-    <!-- Шапка -->
-    <div id="header">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h1>🛡️ SafeRoute AI</h1>
-          <p>Безопасные маршруты Семея</p>
+    <!-- Карта на весь экран -->
+    <div id="map"></div>
+
+    <!-- Плавающая панель управления -->
+    <div id="panel">
+      <!-- Шапка -->
+      <div id="header">
+        <div class="header-row">
+          <div class="logo-area">
+            <div class="logo-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div class="logo-text">
+              <h1>SafeRoute AI</h1>
+              <p>Безопасные маршруты Семея</p>
+            </div>
+          </div>
+          <button id="manage-districts-btn" class="manage-btn" title="Управление районами">
+            <i class="bx bxs-cog-alt"></i>
+          </button>
         </div>
-        <button id="manage-districts-btn" class="manage-btn" title="Управление районами">⚙️</button>
+      </div>
+
+      <!-- Режимы -->
+      <div id="modes">
+        <button class="mode-btn active" data-mode="car">
+          <i class="bx bxs-car"></i>
+          <span>Машина</span>
+        </button>
+        <button class="mode-btn" data-mode="child">
+          <i class="bx bxs-group"></i>
+          <span>Ребёнок</span>
+        </button>
+        <button class="mode-btn" data-mode="tourist">
+          <i class="bx bxs-plane-alt"></i>
+          <span>Турист</span>
+        </button>
+      </div>
+
+      <!-- Поля ввода -->
+      <div id="inputs">
+        <div class="search-container">
+          <div class="input-icon"><i class="bx bxs-map-pin"></i></div>
+          <input type="text" id="input-from" placeholder="Откуда" autocomplete="off" />
+          <button class="geolocate-btn" id="geolocate-from-btn" title="Моё местоположение">
+            <i class="bx bxs-target-lock"></i>
+          </button>
+          <div class="search-dropdown" id="dropdown-from"></div>
+        </div>
+        <div class="search-container">
+          <div class="input-icon"><i class="bx bxs-flag"></i></div>
+          <input type="text" id="input-to" placeholder="Куда" autocomplete="off" />
+          <button class="geolocate-btn" id="geolocate-to-btn" title="Моё местоположение">
+            <i class="bx bxs-target-lock"></i>
+          </button>
+          <div class="search-dropdown" id="dropdown-to"></div>
+        </div>
+      </div>
+
+      <!-- Кнопка построить маршрут -->
+      <button id="build-route-btn">
+        <i class="bx bx-route"></i>
+        Построить маршрут
+      </button>
+
+      <!-- Объяснение от ИИ -->
+      <div id="ai-explanation" class="hidden">
+        <div id="ai-text">Здесь появится объяснение маршрута...</div>
+      </div>
+
+      <!-- Легенда -->
+      <div class="legend">
+        <div class="legend-title">Уровень опасности</div>
+        <div class="legend-bar"></div>
+        <div class="legend-labels">
+          <span class="safe">Безопасно</span>
+          <span class="danger">Опасно</span>
+        </div>
       </div>
     </div>
 
@@ -26,60 +97,15 @@
           <button class="close-modal-btn">&times;</button>
         </div>
         <div class="modal-body">
-          <p style="color: #888; font-size: 12px; margin-bottom: 12px;">
+          <p class="modal-description">
             Обновите уровни опасности районов (1-10). Изменения автоматически синхронизируются с ML моделью.
           </p>
           <div id="districts-list"></div>
-          <div style="display: flex; gap: 8px; margin-top: 16px;">
+          <div class="modal-actions">
             <button id="save-districts-btn" class="primary-btn">Сохранить</button>
             <button id="reset-districts-btn" class="secondary-btn">Сбросить</button>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Карта -->
-    <div id="map"></div>
-
-    <!-- Панель снизу -->
-    <div id="panel">
-      <!-- Кнопки режимов -->
-      <div id="modes">
-        <button class="mode-btn active" data-mode="car">🚗 Машина</button>
-        <button class="mode-btn" data-mode="child">👶 Ребёнок</button>
-        <button class="mode-btn" data-mode="tourist">🧳 Турист</button>
-      </div>
-
-      <!-- Поля ввода с автокомплитом -->
-      <div id="inputs">
-        <div class="search-container">
-          <input
-            type="text"
-            id="input-from"
-            placeholder="📍 Откуда"
-            autocomplete="off"
-          />
-          <button class="geolocate-btn" id="geolocate-from-btn" title="Моё местоположение">📍</button>
-          <div class="search-dropdown" id="dropdown-from"></div>
-        </div>
-        <div class="search-container">
-          <input
-            type="text"
-            id="input-to"
-            placeholder="🏁 Куда"
-            autocomplete="off"
-          />
-          <button class="geolocate-btn" id="geolocate-to-btn" title="Моё местоположение">📍</button>
-          <div class="search-dropdown" id="dropdown-to"></div>
-        </div>
-      </div>
-
-      <!-- Кнопка построить маршрут -->
-      <button id="build-route-btn">Построить маршрут</button>
-
-      <!-- Объяснение от ИИ -->
-      <div id="ai-explanation" class="hidden">
-        <div id="ai-text">Здесь появится объяснение маршрута...</div>
       </div>
     </div>
 
