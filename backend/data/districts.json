@@ -3,7 +3,7 @@
     {
       "id": "center",
       "name": "Центр (Правый берег)",
-      "danger_level": 2,
+      "danger_level": 3,
       "description": "Историческое ядро города, площадь Абая, Центральный парк",
       "polygon": [
         {
@@ -35,7 +35,7 @@
     {
       "id": "tatarskiy",
       "name": "Татарский край",
-      "danger_level": 3,
+      "danger_level": 5,
       "description": "Исторический район XIX века, старинная архитектура",
       "polygon": [
         {
@@ -115,7 +115,7 @@
     {
       "id": "novostroyka",
       "name": "Новостройка",
-      "danger_level": 3,
+      "danger_level": 6,
       "description": "Жилой массив в восточной части правого берега",
       "polygon": [
         {
@@ -143,7 +143,7 @@
     {
       "id": "cemposelok",
       "name": "Цемпоселок",
-      "danger_level": 7,
+      "danger_level": 6,
       "description": "Район у цементного завода, развитая инфраструктура",
       "polygon": [
         {
@@ -183,7 +183,7 @@
     {
       "id": "yunost",
       "name": "Юность",
-      "danger_level": 3,
+      "danger_level": 5,
       "description": "Уютный жилой район в северо-восточной части",
       "polygon": [
         {
@@ -215,7 +215,7 @@
     {
       "id": "vostochniy",
       "name": "Восточный",
-      "danger_level": 4,
+      "danger_level": 8,
       "description": "Частный сектор и дачные общества на востоке",
       "polygon": [
         {
@@ -279,7 +279,7 @@
     {
       "id": "zholaman",
       "name": "Жоламан (Левый берег)",
-      "danger_level": 5,
+      "danger_level": 8,
       "description": "Крупный район частного сектора, административный центр",
       "polygon": [
         {
@@ -303,7 +303,7 @@
     {
       "id": "myasokombinat",
       "name": "Мясокомбинат",
-      "danger_level": 7,
+      "danger_level": 9,
       "description": "Исторический район у мясоконсервного комбината",
       "polygon": [
         {
@@ -327,7 +327,7 @@
     {
       "id": "zaton",
       "name": "Затон",
-      "danger_level": 5,
+      "danger_level": 7,
       "description": "Район речного порта и судоремонтного завода",
       "polygon": [
         {
@@ -361,30 +361,6 @@
         {
           "lat": 50.437391152028304,
           "lng": 80.22276878356935
-        }
-      ]
-    },
-    {
-      "id": "stepnoy",
-      "name": "Степной",
-      "danger_level": 4,
-      "description": "Микрорайон на выезде в сторону Павлодара",
-      "polygon": [
-        {
-          "lat": 50.39,
-          "lng": 80.265
-        },
-        {
-          "lat": 50.39,
-          "lng": 80.285
-        },
-        {
-          "lat": 50.375,
-          "lng": 80.285
-        },
-        {
-          "lat": 50.375,
-          "lng": 80.265
         }
       ]
     },
@@ -452,7 +428,7 @@
       "id": "new_1781261284316",
       "name": "Ушактар",
       "description": "",
-      "danger_level": 5,
+      "danger_level": 7,
       "polygon": [
         {
           "lat": 50.36107055825406,
@@ -476,7 +452,7 @@
       "id": "new_1781261303532",
       "name": "Комсомольский",
       "description": "",
-      "danger_level": 5,
+      "danger_level": 6,
       "polygon": [
         {
           "lat": 50.37338815138253,
@@ -504,7 +480,7 @@
       "id": "new_1781261612468",
       "name": "343-й квартал",
       "description": "",
-      "danger_level": 5,
+      "danger_level": 4,
       "polygon": [
         {
           "lat": 50.44209176512366,
@@ -528,7 +504,7 @@
       "id": "new_1781261639180",
       "name": "352-й квартал",
       "description": "",
-      "danger_level": 5,
+      "danger_level": 4,
       "polygon": [
         {
           "lat": 50.43922238227246,
@@ -552,7 +528,7 @@
       "id": "new_1781261865444",
       "name": "71-й квартал",
       "description": "",
-      "danger_level": 5,
+      "danger_level": 3,
       "polygon": [
         {
           "lat": 50.41710738881808,
@@ -580,7 +556,7 @@
       "id": "new_1781261887492",
       "name": "Лодочная",
       "description": "",
-      "danger_level": 5,
+      "danger_level": 6,
       "polygon": [
         {
           "lat": 50.42853373251685,
@@ -612,7 +588,7 @@
       "id": "new_1781261910300",
       "name": "Казкрай",
       "description": "",
-      "danger_level": 5,
+      "danger_level": 7,
       "polygon": [
         {
           "lat": 50.42552576557901,
@@ -644,7 +620,7 @@
       "id": "new_1781261935757",
       "name": "Сроства",
       "description": "",
-      "danger_level": 5,
+      "danger_level": 7,
       "polygon": [
         {
           "lat": 50.44558775522014,
@@ -672,7 +648,7 @@
       "id": "new_1781261953869",
       "name": "Поселок железнодорожников",
       "description": "",
-      "danger_level": 5,
+      "danger_level": 7,
       "polygon": [
         {
           "lat": 50.433945677340844,

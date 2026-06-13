@@ -36,6 +36,7 @@ body {
     width: 100%;
     height: 55vh;
     background-color: #000;
+    position: relative;
 }
  
 /* ПАНЕЛЬ СНИЗУ */
@@ -85,13 +86,54 @@ body {
  
 #inputs input {
     width: 100%;
-    padding: 10px 14px;
+    padding: 10px 44px 10px 14px;
     border-radius: 10px;
     border: 1px solid #333;
     background-color: #1e1e2e;
     color: white;
     font-size: 14px;
     outline: none;
+}
+
+/* Кнопка геолокации */
+.geolocate-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.geolocate-btn:hover {
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.5);
+}
+
+.geolocate-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.geolocate-btn.loading {
+    animation: pulse 1s infinite;
+    background: #666;
+    cursor: wait;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
  
 #inputs input::placeholder {
@@ -136,6 +178,10 @@ body {
 
 .search-item:hover {
     background-color: #2a2a3e;
+}
+
+.search-item.search-item-highlight {
+    background-color: #3a3a4e;
 }
 
 .search-item:last-child {
@@ -238,4 +284,196 @@ body {
 .prediction-marker {
     background: transparent;
     border: none;
+}
+
+/* Кнопка управления районами */
+.manage-btn {
+  background: #2a2a3e;
+  border: 1px solid #4a4a5e;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+
+.manage-btn:hover {
+  background: #3a3a4e;
+  transform: scale(1.05);
+}
+
+/* Модальное окно */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #1a1a2e;
+  border: 1px solid #4a4a5e;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 16px;
+  border-bottom: 1px solid #4a4a5e;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.close-modal-btn:hover {
+  color: #fff;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+#districts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.district-item {
+  background: #2a2a3e;
+  border: 1px solid #4a4a5e;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.district-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.district-item-name {
+  font-weight: 600;
+  color: #fff;
+  font-size: 14px;
+}
+
+.district-item-description {
+  color: #888;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.danger-level-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.danger-level-label {
+  color: #aaa;
+  font-size: 12px;
+  min-width: 120px;
+}
+
+.danger-level-input {
+  width: 60px;
+  padding: 6px;
+  background: #1a1a2e;
+  border: 1px solid #4a4a5e;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+}
+
+.danger-level-input:focus {
+  outline: none;
+  border-color: #56CCF2;
+}
+
+.danger-level-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.primary-btn, .secondary-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #56CCF2, #2F80ED);
+  color: #fff;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(86, 204, 242, 0.4);
+}
+
+.primary-btn:active {
+  transform: translateY(0);
+}
+
+.secondary-btn {
+  background: #2a2a3e;
+  border: 1px solid #4a4a5e;
+  color: #aaa;
+}
+
+.secondary-btn:hover {
+  background: #3a3a4e;
+  color: #fff;
 }

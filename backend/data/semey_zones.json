@@ -2,64 +2,200 @@
   {
     "id": "center",
     "name": "Центр",
-    "danger_level": 3,
-    "lat": 50.4111,
-    "lng": 80.2275,
-    "radius": 800,
-    "description": "Людно, освещено, камеры наблюдения"
-  },
-  {
-    "id": "railway",
-    "name": "Железнодорожный",
-    "danger_level": 5,
-    "lat": 50.42,
-    "lng": 80.25,
-    "radius": 600,
-    "description": "Смешанный трафик, вокзал"
-  },
-  {
-    "id": "industrial_north",
-    "name": "Промышленный север",
-    "danger_level": 8,
-    "lat": 50.45,
-    "lng": 80.23,
-    "radius": 1000,
-    "description": "Мало освещения, редкие прохожие"
-  },
-  {
-    "id": "irtysh_embankment",
-    "name": "Набережная Иртыша",
     "danger_level": 2,
-    "lat": 50.4,
-    "lng": 80.2,
-    "radius": 700,
-    "description": "Популярное место, хорошо освещено"
+    "lat": 50.4107,
+    "lng": 80.2458,
+    "radius": 800,
+    "description": "Исторический центр, площадь Абая, хорошо освещено"
   },
   {
-    "id": "sleeping_west",
-    "name": "Спальные районы запад",
-    "danger_level": 6,
-    "lat": 50.41,
-    "lng": 80.18,
-    "radius": 900,
-    "description": "Тёмные переулки ночью"
-  },
-  {
-    "id": "shygys_market",
-    "name": "Рынок Шыгыс",
-    "danger_level": 5,
-    "lat": 50.415,
-    "lng": 80.24,
-    "radius": 500,
-    "description": "Карманники, толпа"
-  },
-  {
-    "id": "eastern_new",
-    "name": "Новостройки восток",
-    "danger_level": 4,
-    "lat": 50.42,
-    "lng": 80.27,
+    "id": "tatarskiy",
+    "name": "Татарский край",
+    "danger_level": 3,
+    "lat": 50.4034,
+    "lng": 80.2673,
     "radius": 600,
-    "description": "Новая инфраструктура, камеры"
+    "description": "Исторический район, смешанная застройка"
+  },
+  {
+    "id": "energetik",
+    "name": "Энергетик",
+    "danger_level": 4,
+    "lat": 50.4483,
+    "lng": 80.2587,
+    "radius": 700,
+    "description": "Микрорайон с многоэтажками, умеренная безопасность"
+  },
+  {
+    "id": "novostroyka",
+    "name": "Новостройка",
+    "danger_level": 3,
+    "lat": 50.3875,
+    "lng": 80.2398,
+    "radius": 650,
+    "description": "Жилой массив, хорошая инфраструктура"
+  },
+  {
+    "id": "cemposelok",
+    "name": "Цемпоселок",
+    "danger_level": 7,
+    "lat": 50.4041,
+    "lng": 80.2103,
+    "radius": 900,
+    "description": "Район у цементного завода, мало освещения"
+  },
+  {
+    "id": "yunost",
+    "name": "Юность",
+    "danger_level": 3,
+    "lat": 50.3698,
+    "lng": 80.2387,
+    "radius": 500,
+    "description": "Уютный жилой район"
+  },
+  {
+    "id": "vostochniy",
+    "name": "Восточный",
+    "danger_level": 4,
+    "lat": 50.4021,
+    "lng": 80.2947,
+    "radius": 800,
+    "description": "Частный сектор, дачные общества"
+  },
+  {
+    "id": "karagaily",
+    "name": "Карагайлы",
+    "danger_level": 2,
+    "lat": 50.4581,
+    "lng": 80.2402,
+    "radius": 600,
+    "description": "Новейший район, комплекс Арена, безопасно"
+  },
+  {
+    "id": "zholaman",
+    "name": "Жоламан",
+    "danger_level": 5,
+    "lat": 50.3623,
+    "lng": 80.2745,
+    "radius": 700,
+    "description": "Частный сектор на левом берегу, административный центр"
+  },
+  {
+    "id": "myasokombinat",
+    "name": "Мясокомбинат",
+    "danger_level": 7,
+    "lat": 50.3738,
+    "lng": 80.2513,
+    "radius": 700,
+    "description": "Исторический район, мало освещения ночью"
+  },
+  {
+    "id": "zaton",
+    "name": "Затон",
+    "danger_level": 5,
+    "lat": 50.4498,
+    "lng": 80.2187,
+    "radius": 600,
+    "description": "Район речного порта, промышленная зона"
+  },
+
+  {
+    "id": "kvartal_342",
+    "name": "342-й квартал",
+    "danger_level": 4,
+    "lat": 50.4374,
+    "lng": 80.2345,
+    "radius": 500,
+    "description": "Спальный квартал с дворами и школами"
+  },
+  {
+    "id": "silikatny",
+    "name": "Силикатный",
+    "danger_level": 6,
+    "lat": 50.4437,
+    "lng": 80.2315,
+    "radius": 500,
+    "description": "Поселок у завода силикатного кирпича"
+  },
+  {
+    "id": "ushaktar",
+    "name": "Ушактар",
+    "danger_level": 5,
+    "lat": 50.3641,
+    "lng": 80.2158,
+    "radius": 600,
+    "description": "Жилой район, умеренная инфраструктура"
+  },
+  {
+    "id": "komsomolskiy",
+    "name": "Комсомольский",
+    "danger_level": 5,
+    "lat": 50.3771,
+    "lng": 80.2103,
+    "radius": 600,
+    "description": "Исторический район"
+  },
+  {
+    "id": "kvartal_343",
+    "name": "343-й квартал",
+    "danger_level": 5,
+    "lat": 50.4412,
+    "lng": 80.2393,
+    "radius": 450,
+    "description": "Спальный квартал"
+  },
+  {
+    "id": "kvartal_352",
+    "name": "352-й квартал",
+    "danger_level": 5,
+    "lat": 50.4342,
+    "lng": 80.2456,
+    "radius": 450,
+    "description": "Спальный квартал"
+  },
+  {
+    "id": "kvartal_71",
+    "name": "71-й квартал",
+    "danger_level": 5,
+    "lat": 50.4217,
+    "lng": 80.2403,
+    "radius": 500,
+    "description": "Спальный квартал с активной жизнью"
+  },
+  {
+    "id": "lodochnaya",
+    "name": "Лодочная",
+    "danger_level": 5,
+    "lat": 50.4297,
+    "lng": 80.2213,
+    "radius": 500,
+    "description": "Район у лодочной станции"
+  },
+  {
+    "id": "kazkray",
+    "name": "Казкрай",
+    "danger_level": 5,
+    "lat": 50.4213,
+    "lng": 80.2713,
+    "radius": 500,
+    "description": "Жилой район восточной части"
+  },
+  {
+    "id": "srosta",
+    "name": "Сроста",
+    "danger_level": 5,
+    "lat": 50.4371,
+    "lng": 80.2613,
+    "radius": 450,
+    "description": "Жилой район"
+  },
+  {
+    "id": "pos_zheleznodorozhnikov",
+    "name": "Поселок железнодорожников",
+    "danger_level": 5,
+    "lat": 50.4317,
+    "lng": 80.2853,
+    "radius": 600,
+    "description": "Район у железной дороги, смешанный трафик"
   }
 ]

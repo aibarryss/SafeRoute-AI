@@ -63,10 +63,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — разрешить все origins (hackathon)
+# CORS — разрешить конкретные origins для безопасности
+# Для продакшена заменить на реальный домен фронтенда
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5500",      # Live Server VS Code
+        "http://127.0.0.1:5500",     # Альтернативный адрес
+        "http://localhost:8080",      # Альтернативный порт
+        "http://127.0.0.1:8080",
+        "http://localhost:3000",      # React dev server
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
