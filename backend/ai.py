@@ -49,7 +49,7 @@ async def reverse_geocode(lat: float, lng: float) -> str:
     Получает название места по координатам через 2GIS API.
     Fallback на Nominatim если 2GIS недоступен.
     """
-    # Пробуем 2GIS (только если ключ задан)
+    
     if TWOGIS_API_KEY:
         try:
             async with httpx.AsyncClient() as client:
@@ -69,7 +69,7 @@ async def reverse_geocode(lat: float, lng: float) -> str:
                 items = data.get("result", {}).get("items", [])
                 if items:
                     item = items[0]
-                    # Берём название или адрес
+                  
                     name = (
                         item.get("name", "")
                         or item.get("address_name", "")
@@ -80,7 +80,7 @@ async def reverse_geocode(lat: float, lng: float) -> str:
         except Exception as e:
             logger.error("2GIS Geocoding error: %s", e)
 
-    # Fallback: Nominatim
+    
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -135,25 +135,25 @@ def build_prompt(
         "tourist": "Дай совет для туриста: упомяни интересные места по пути, безопасные фото-точки.",
     }.get(mode, "")
 
-    # Районы на маршруте
+  
     districts_text = ""
     if districts_on_route:
         names = [d["name"] for d in districts_on_route]
         districts_text = f"\nМаршрут проходит через районы: {', '.join(names)}."
 
-    # Обойдённые зоны
+    
     avoided_text = ""
     if avoided_zones:
         lines = [f"  - {z['name']} (опасность: {z['danger_level']}/10)" for z in avoided_zones[:4]]
         avoided_text = f"\nОбойдённые опасные районы:\n" + "\n".join(lines)
 
-    # Близкие зоны
+   
     nearby_text = ""
     if nearby_zones:
         lines = [f"  - {z['name']} (опасность: {z['danger_level']}/10, {z['distance']}м от маршрута)" for z in nearby_zones[:3]]
         nearby_text = f"\nРайоны рядом с маршрутом:\n" + "\n".join(lines)
 
-    # Оценка безопасности
+   
     if danger_score <= 3:
         safety = "НИЗКИЙ — маршрут очень безопасный"
     elif danger_score <= 6:
@@ -203,7 +203,7 @@ async def generate_route_explanation(
         return _fallback_explanation(mode, zones_avoided, danger_score, districts_on_route)
 
     try:
-        # Получаем реальные названия начальной и конечной точек
+        
         start_name = await reverse_geocode(route[0]["lat"], route[0]["lng"])
         end_name = await reverse_geocode(route[-1]["lat"], route[-1]["lng"])
 

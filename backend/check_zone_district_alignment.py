@@ -6,7 +6,6 @@ import math
 import sys
 from pathlib import Path
 
-# Исправляем кодировку для Windows
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
@@ -48,7 +47,7 @@ def get_polygon_center(polygon):
     return lat_sum / len(polygon), lng_sum / len(polygon)
 
 def main():
-    # Загружаем данные
+    
     data_dir = Path(__file__).parent / 'data'
 
     with open(data_dir / 'semey_zones.json', 'r', encoding='utf-8') as f:
@@ -63,22 +62,21 @@ def main():
     print("=" * 80)
     print()
 
-    # Для каждой зоны находим районы, которые в неё попадают
+    
     for zone in zones:
         print(f"\nЗОНА: {zone['name']} (ID: {zone['id']})")
         print(f"  Центр: ({zone['lat']}, {zone['lng']})")
         print(f"  Радиус: {zone['radius']} м")
         print(f"  Danger Level: {zone['danger_level']}")
         print()
-
-        # Находим районы, чьи центры попадают в зону
+   
         affected_districts = []
 
         for district in districts:
             center_lat, center_lng = get_polygon_center(district['polygon'])
             distance = haversine(zone['lat'], zone['lng'], center_lat, center_lng)
 
-            # Проверяем, попадает ли центр района в зону
+            
             if distance <= zone['radius']:
                 affected_districts.append({
                     'district': district,
@@ -104,7 +102,7 @@ def main():
     print("СВОДКА ПО НЕСООТВЕТСТВИЯМ")
     print("=" * 80)
 
-    # Собираем все несоответствия
+
     mismatches = []
 
     for zone in zones:

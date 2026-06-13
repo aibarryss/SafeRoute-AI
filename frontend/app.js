@@ -1,5 +1,7 @@
-// ===== КОНФИГУРАЦИЯ =====
-const IS_DEV = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+//КОНФИГУРАЦИЯ
+const IS_DEV =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
 const API_BASE = IS_DEV
   ? "http://localhost:8000"
   : "https://saferoute-ai-production-f06b.up.railway.app";
@@ -19,26 +21,34 @@ async function loadConfig() {
 
     if (!TWOGIS_API_KEY) {
       if (IS_DEV) {
-        console.warn("⚠️ 2GIS ключ пуст от backend. Используется dev-only fallback. Настройте TWOGIS_API_KEY в .env для продакшена.");
+        console.warn(
+          "⚠️ 2GIS ключ пуст от backend. Используется dev-only fallback. Настройте TWOGIS_API_KEY в .env для продакшена.",
+        );
         TWOGIS_API_KEY = "2db79fdb-a7bc-43c4-8e90-5ca828ef5449";
       } else {
-        console.error("❌ 2GIS API ключ не настроен. Добавьте TWOGIS_API_KEY в backend/.env");
+        console.error(
+          "❌ 2GIS API ключ не настроен. Добавьте TWOGIS_API_KEY в backend/.env",
+        );
         throw new Error("2GIS API key not configured");
       }
     }
     return TWOGIS_API_KEY;
   } catch (error) {
     if (IS_DEV) {
-      console.warn("⚠️ Бэкенд недоступен. Используется dev-only fallback ключ.");
+      console.warn(
+        "⚠️ Бэкенд недоступен. Используется dev-only fallback ключ.",
+      );
       TWOGIS_API_KEY = "2db79fdb-a7bc-43c4-8e90-5ca828ef5449";
       return TWOGIS_API_KEY;
     }
-    console.error("❌ Бэкенд недоступен. Убедитесь что backend запущен и .env настроен");
+    console.error(
+      "❌ Бэкенд недоступен. Убедитесь что backend запущен и .env настроен",
+    );
     throw error;
   }
 }
 
-// ===== ИНИЦИАЛИЗАЦИЯ КАРТЫ 2GIS =====
+// ИНИЦИАЛИЗАЦИЯ КАРТЫ 2GIS
 async function initMap() {
   console.log("🗺️ Инициализация карты 2GIS...");
 
@@ -72,7 +82,7 @@ async function initMap() {
       console.log("✓ Карта 2GIS загружена");
     });
 
-    // ===== КЛИК ПО КАРТЕ — ML ПРЕДСКАЗАНИЕ =====
+    // КЛИК ПО КАРТЕ — ML ПРЕДСКАЗАНИЕ
     map.on("click", async (e) => {
       const [lng, lat] = e.lngLat; // 2GIS возвращает [lng, lat]
 
@@ -117,7 +127,7 @@ async function initMap() {
 
         const riskText = translateRiskCategory(prediction.risk_category);
         showMapToast(
-          `ML Предсказание: Уровень опасности ${prediction.danger_level}/10 (${riskText}). Уверенность: ${(prediction.confidence * 100).toFixed(1)}%`
+          `ML Предсказание: Уровень опасности ${prediction.danger_level}/10 (${riskText}). Уверенность: ${(prediction.confidence * 100).toFixed(1)}%`,
         );
 
         console.log("✓ Предсказание:", prediction);
@@ -140,11 +150,11 @@ async function initMap() {
 
 // Массивы для хранения объектов карты
 let districtObjects = []; // полигоны + маркеры районов
-let markerObjects = [];   // маркеры выбранных адресов
-let routeObject = null;   // полилиния маршрута
+let markerObjects = []; // маркеры выбранных адресов
+let routeObject = null; // полилиния маршрута
 let predictMarker = null; // маркер ML предсказания
 
-// ===== ЗАГРУЗКА РАЙОНОВ ГОРОДА =====
+// ЗАГРУЗКА РАЙОНОВ ГОРОДА
 async function loadDistricts() {
   try {
     const response = await fetch(`${API_BASE}/api/districts`);
@@ -216,7 +226,7 @@ function showMapToast(text) {
   }, 4000);
 }
 
-// ===== ЗАГРУЗКА ИНФОРМАЦИИ О ML МОДЕЛИ =====
+//ЗАГРУЗКА ИНФОРМАЦИИ О ML МОДЕЛИ
 async function loadMLInfo() {
   try {
     const response = await fetch(`${API_BASE}/api/ml/info`);
@@ -277,18 +287,19 @@ function displayModelInfo(info) {
   `;
 }
 
-
-// ===== ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ МАРШРУТА =====
+// ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ МАРШРУТА
 document.querySelectorAll(".mode-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("active"));
+    document
+      .querySelectorAll(".mode-btn")
+      .forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     currentMode = btn.dataset.mode;
     console.log(`✓ Режим изменен: ${currentMode}`);
   });
 });
 
-// ===== ЦВЕТА И УТИЛИТЫ =====
+// ЦВЕТА И УТИЛИТЫ
 
 // Цвет по уровню опасности
 function getDangerColor(level) {
@@ -309,7 +320,6 @@ function translateRiskCategory(category) {
   return translations[category] || category;
 }
 
-// Sanitizes user/server-supplied text to prevent XSS
 function escapeHtml(str) {
   if (typeof str !== "string") return String(str);
   return str
@@ -342,119 +352,122 @@ function getPolygonCenter(polygon) {
   };
 }
 
-// ===== ПОСТРОЕНИЕ МАРШРУТА =====
-document.getElementById("build-route-btn").addEventListener("click", async () => {
-  const startCoords = getFromCoords.get();
-  const endCoords = getToCoords.get();
+//ПОСТРОЕНИЕ МАРШРУТА
+document
+  .getElementById("build-route-btn")
+  .addEventListener("click", async () => {
+    const startCoords = getFromCoords.get();
+    const endCoords = getToCoords.get();
 
-  if (!startCoords || !endCoords) {
-    alert("Выберите адреса из списка подсказок");
-    return;
-  }
-
-  // Fetch route data from backend
-  let data;
-  try {
-    const now = new Date();
-    const hour = now.getHours();
-    const day = now.getDay();
-    const dayOfWeek = day === 0 ? 6 : day - 1;
-
-    const response = await fetch(`${API_BASE}/api/route`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        start: startCoords,
-        end: endCoords,
-        mode: currentMode,
-        hour: hour,
-        day: dayOfWeek,
-      }),
-    });
-
-    if (!response.ok) {
-      showMapToast(`Ошибка сервера: ${response.status}`);
+    if (!startCoords || !endCoords) {
+      alert("Выберите адреса из списка подсказок");
       return;
     }
 
-    data = await response.json();
-  } catch (error) {
-    console.error("Ошибка запроса к серверу:", error);
-    showMapToast("Не удалось подключиться к серверу. Убедитесь что бэкенд запущен.");
-    return;
-  }
+    let data;
+    try {
+      const now = new Date();
+      const hour = now.getHours();
+      const day = now.getDay();
+      const dayOfWeek = day === 0 ? 6 : day - 1;
 
-  // Удаляем старый маршрут
-  if (routeObject) {
-    routeObject.destroy();
-    routeObject = null;
-  }
+      const response = await fetch(`${API_BASE}/api/route`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start: startCoords,
+          end: endCoords,
+          mode: currentMode,
+          hour: hour,
+          day: dayOfWeek,
+        }),
+      });
 
-  // Defensive checks
-  const warnings = Array.isArray(data.warnings) ? data.warnings.map(escapeHtml) : [];
-  const aiExplanation = escapeHtml(data.ai_explanation || "");
-  const dangerScore = typeof data.danger_score === "number" ? data.danger_score : 5;
+      if (!response.ok) {
+        showMapToast(`Ошибка сервера: ${response.status}`);
+        return;
+      }
 
-  // Если маршрут невозможно построить
-  if (data.route_buildable === false) {
-    showMapToast("Невозможно построить безопасный маршрут. Измените точки старта/финиша.");
-    const explanationDiv = document.getElementById("ai-explanation");
-    explanationDiv.classList.remove("hidden");
-    explanationDiv.innerHTML = `
+      data = await response.json();
+    } catch (error) {
+      console.error("Ошибка запроса к серверу:", error);
+      showMapToast(
+        "Не удалось подключиться к серверу. Убедитесь что бэкенд запущен.",
+      );
+      return;
+    }
+
+    // Удаляем старый маршрут
+    if (routeObject) {
+      routeObject.destroy();
+      routeObject = null;
+    }
+
+    const warnings = Array.isArray(data.warnings)
+      ? data.warnings.map(escapeHtml)
+      : [];
+    const aiExplanation = escapeHtml(data.ai_explanation || "");
+    const dangerScore =
+      typeof data.danger_score === "number" ? data.danger_score : 5;
+
+    // Если маршрут невозможно построить
+    if (data.route_buildable === false) {
+      showMapToast(
+        "Невозможно построить безопасный маршрут. Измените точки старта/финиша.",
+      );
+      const explanationDiv = document.getElementById("ai-explanation");
+      explanationDiv.classList.remove("hidden");
+      explanationDiv.innerHTML = `
       <div style="margin-bottom: 12px;">
         <b style="font-size: 16px;">🚨 Маршрут невозможно построить</b>
       </div>
       <div style="background: rgba(255,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 12px; border: 2px solid #F44336;">
         <div style="font-size: 13px; line-height: 1.6;">
-          ${warnings.join('<br>')}
+          ${warnings.join("<br>")}
         </div>
       </div>
       <div style="font-size: 12px; color: #aaa;">
         Попробуйте выбрать другие точки старта и финиша, избегая опасных районов.
       </div>
     `;
-    return;
-  }
+      return;
+    }
 
-  // Цвет линии в зависимости от уровня опасности
-  const routeColor =
-    dangerScore <= 3
-      ? "#4CAF50"
-      : dangerScore <= 6
-        ? "#FF9800"
-        : "#F44336";
+    // Цвет линии в зависимости от уровня опасности
+    const routeColor =
+      dangerScore <= 3 ? "#4CAF50" : dangerScore <= 6 ? "#FF9800" : "#F44336";
 
-  // Рисуем полилинию маршрута
-  if (data.route && data.route.length > 0) {
-    routeObject = new mapgl.Polyline(map, {
-      coordinates: data.route.map((p) => [p.lng, p.lat]),
-      width: 5,
-      color: routeColor,
-    });
-  }
+    // Рисуем полилинию маршрута
+    if (data.route && data.route.length > 0) {
+      routeObject = new mapgl.Polyline(map, {
+        coordinates: data.route.map((p) => [p.lng, p.lat]),
+        width: 5,
+        color: routeColor,
+      });
+    }
 
-  // Показать информацию о безопасности маршрута
-  const safetyLevel =
-    dangerScore <= 3
-      ? "БЕЗОПАСНЫЙ"
-      : dangerScore <= 6
-        ? "СРЕДНЕЙ ОПАСНОСТИ"
-        : "ОПАСНЫЙ";
+    // Показать информацию о безопасности маршрута
+    const safetyLevel =
+      dangerScore <= 3
+        ? "БЕЗОПАСНЫЙ"
+        : dangerScore <= 6
+          ? "СРЕДНЕЙ ОПАСНОСТИ"
+          : "ОПАСНЫЙ";
 
-  const safetyIcon =
-    dangerScore <= 3 ? "✅" : dangerScore <= 6 ? "⚠️" : "🚨";
+    const safetyIcon = dangerScore <= 3 ? "✅" : dangerScore <= 6 ? "⚠️" : "🚨";
 
-  const warningsHTML = warnings.length > 0
-    ? `<div style="background: rgba(255,152,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 12px; border: 2px solid #FF9800;">
+    const warningsHTML =
+      warnings.length > 0
+        ? `<div style="background: rgba(255,152,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 12px; border: 2px solid #FF9800;">
          <div style="font-size: 13px; line-height: 1.6; color: #FFA726;">
-           ${warnings.join('<br>')}
+           ${warnings.join("<br>")}
          </div>
        </div>`
-    : '';
+        : "";
 
-  const explanationDiv = document.getElementById("ai-explanation");
-  explanationDiv.classList.remove("hidden");
-  explanationDiv.innerHTML = `
+    const explanationDiv = document.getElementById("ai-explanation");
+    explanationDiv.classList.remove("hidden");
+    explanationDiv.innerHTML = `
     <div style="margin-bottom: 12px;">
       <b style="font-size: 16px;">${safetyIcon} Маршрут: ${safetyLevel}</b>
     </div>
@@ -478,43 +491,103 @@ document.getElementById("build-route-btn").addEventListener("click", async () =>
     </div>
   `;
 
-  // Автоматически масштабируем карту на весь маршрут
-  if (data.route && data.route.length > 1) {
-    const lats = data.route.map((p) => p.lat);
-    const lngs = data.route.map((p) => p.lng);
-    const minLat = Math.min(...lats),
-      maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs),
-      maxLng = Math.max(...lngs);
+    // Автоматически масштабируем карту на весь маршрут
+    if (data.route && data.route.length > 1) {
+      const lats = data.route.map((p) => p.lat);
+      const lngs = data.route.map((p) => p.lng);
+      const minLat = Math.min(...lats),
+        maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs),
+        maxLng = Math.max(...lngs);
 
-    map.fit([
-      [minLng - 0.005, minLat - 0.005],
-      [maxLng + 0.005, maxLat + 0.005],
-    ]);
-  }
+      map.fit([
+        [minLng - 0.005, minLat - 0.005],
+        [maxLng + 0.005, maxLat + 0.005],
+      ]);
+    }
 
-  console.log("Маршрут построен:", data);
-});
+    console.log("Маршрут построен:", data);
+  });
 
-// ===== ГЕОКОДИНГ ЧЕРЕЗ 2GIS API =====
+// ГЕОКОДИНГ ЧЕРЕЗ 2GIS API
 
 // Популярные места Семея (точные координаты из 2GIS API)
 const POPULAR_PLACES = [
-  { name: "Площадь Абая", address: "Площадь Абая, Семей", lat: 50.401401, lng: 80.257177 },
-  { name: "Центральный парк", address: "Центральный парк, Семей", lat: 50.4092, lng: 80.251695 },
-  { name: "Ж/д вокзал Семей", address: "Привокзальная площадь, 1", lat: 50.431783, lng: 80.262986 },
-  { name: "Автовокзал", address: "ул. Чокана Валиханова, 167", lat: 50.417208, lng: 80.248 },
-  { name: "Университет Шакарима", address: "ул. Глинки, 20а", lat: 50.399279, lng: 80.213045 },
-  { name: "Медицинский университет", address: "ул. Абая Кунанбаева, 103", lat: 50.405884, lng: 80.24392 },
-  { name: "Family мини-маркет", address: "проспект Шакарима, 150", lat: 50.425707, lng: 80.266045 },
-  { name: "Евразия страховая", address: "ул. Миржакипа Дулатова, 135", lat: 50.408093, lng: 80.255193 },
-  { name: "Рынок Акшын", address: "Рынок Акшын, Семей", lat: 50.418192, lng: 80.24843 },
-  { name: "Драматический театр им. Абая", address: "Муз.-драм. театр им. Абая, Семей", lat: 50.405668, lng: 80.250347 },
-  { name: "Музей Достоевского", address: "Музей Достоевского, Семей", lat: 50.404296, lng: 80.251854 },
-  { name: "Больница №1", address: "ул. Богенбай батыра, 134", lat: 50.40693, lng: 80.255409 },
+  {
+    name: "Площадь Абая",
+    address: "Площадь Абая, Семей",
+    lat: 50.401401,
+    lng: 80.257177,
+  },
+  {
+    name: "Центральный парк",
+    address: "Центральный парк, Семей",
+    lat: 50.4092,
+    lng: 80.251695,
+  },
+  {
+    name: "Ж/д вокзал Семей",
+    address: "Привокзальная площадь, 1",
+    lat: 50.431783,
+    lng: 80.262986,
+  },
+  {
+    name: "Автовокзал",
+    address: "ул. Чокана Валиханова, 167",
+    lat: 50.417208,
+    lng: 80.248,
+  },
+  {
+    name: "Университет Шакарима",
+    address: "ул. Глинки, 20а",
+    lat: 50.399279,
+    lng: 80.213045,
+  },
+  {
+    name: "Медицинский университет",
+    address: "ул. Абая Кунанбаева, 103",
+    lat: 50.405884,
+    lng: 80.24392,
+  },
+  {
+    name: "Family мини-маркет",
+    address: "проспект Шакарима, 150",
+    lat: 50.425707,
+    lng: 80.266045,
+  },
+  {
+    name: "Евразия страховая",
+    address: "ул. Миржакипа Дулатова, 135",
+    lat: 50.408093,
+    lng: 80.255193,
+  },
+  {
+    name: "Рынок Акшын",
+    address: "Рынок Акшын, Семей",
+    lat: 50.418192,
+    lng: 80.24843,
+  },
+  {
+    name: "Драматический театр им. Абая",
+    address: "Муз.-драм. театр им. Абая, Семей",
+    lat: 50.405668,
+    lng: 80.250347,
+  },
+  {
+    name: "Музей Достоевского",
+    address: "Музей Достоевского, Семей",
+    lat: 50.404296,
+    lng: 80.251854,
+  },
+  {
+    name: "Больница №1",
+    address: "ул. Богенбай батыра, 134",
+    lat: 50.40693,
+    lng: 80.255409,
+  },
 ];
 
-// ===== ПОИСК ЧЕРЕЗ NOMINATIM (OpenStreetMap) =====
+// ПОИСК ЧЕРЕЗ NOMINATIM (OpenStreetMap)
 
 // Поиск адреса через Nominatim (бесплатный, быстрый, точный)
 async function searchNominatim(query) {
@@ -530,13 +603,12 @@ async function searchNominatim(query) {
     }
 
     const data = await response.json();
-    return (data.results || []).map(item => ({
+    return (data.results || []).map((item) => ({
       name: item.name,
       address: item.address,
       lat: item.lat,
       lng: item.lng,
     }));
-
   } catch (error) {
     console.error("Ошибка Nominatim поиска:", error);
     return [];
@@ -554,7 +626,6 @@ async function reverseGeocode(lat, lng) {
     }
 
     return await response.json();
-
   } catch (error) {
     console.error("Ошибка обратного геокодирования:", error);
     return { name: "Моё местоположение", address: "", lat, lng };
@@ -591,8 +662,10 @@ async function searchAddress(query) {
       searchNominatim(query),
     ]);
 
-    const twoResults = twogisResults.status === "fulfilled" ? twogisResults.value : [];
-    const nomResults = nominatimResults.status === "fulfilled" ? nominatimResults.value : [];
+    const twoResults =
+      twogisResults.status === "fulfilled" ? twogisResults.value : [];
+    const nomResults =
+      nominatimResults.status === "fulfilled" ? nominatimResults.value : [];
 
     // Объединяем: 2GIS приоритетнее (точнее для Казахстана)
     const allResults = [...twoResults, ...nomResults];
@@ -604,8 +677,8 @@ async function searchAddress(query) {
         self.findIndex(
           (r) =>
             Math.abs(r.lat - result.lat) < 0.0001 &&
-            Math.abs(r.lng - result.lng) < 0.0001
-        )
+            Math.abs(r.lng - result.lng) < 0.0001,
+        ),
     );
 
     const results = uniqueResults.slice(0, 10);
@@ -618,7 +691,6 @@ async function searchAddress(query) {
     }
     searchCache.set(cacheKey, results);
     return results;
-
   } catch (error) {
     console.error("Ошибка поиска адреса:", error);
     return [];
@@ -647,7 +719,6 @@ async function search2GIS(query) {
         lat: item.point.lat,
         lng: item.point.lon,
       }));
-
   } catch (error) {
     console.error("Ошибка 2GIS Geocoder:", error);
     return [];
@@ -662,7 +733,7 @@ function filterPopularPlaces(query) {
   return POPULAR_PLACES.filter(
     (place) =>
       place.name.toLowerCase().includes(q) ||
-      place.address.toLowerCase().includes(q)
+      place.address.toLowerCase().includes(q),
   );
 }
 
@@ -823,12 +894,14 @@ function setupAutocomplete(inputId, dropdownId, markerColor) {
           self.findIndex(
             (r) =>
               Math.abs(r.lat - result.lat) < 0.0001 &&
-              Math.abs(r.lng - result.lng) < 0.0001
-          )
+              Math.abs(r.lng - result.lng) < 0.0001,
+          ),
       );
 
       currentResults = uniqueResults;
-      showSearchResults(dropdownId, uniqueResults, (result) => selectItem(result));
+      showSearchResults(dropdownId, uniqueResults, (result) =>
+        selectItem(result),
+      );
     }, SEARCH_DEBOUNCE_MS);
   });
 
@@ -863,15 +936,19 @@ function setupAutocomplete(inputId, dropdownId, markerColor) {
 
       // Закрываем dropdown
       dropdown.classList.remove("active");
-    }
+    },
   };
 }
 
 // Настройка автокомплита для полей "Откуда" и "Куда"
-const getFromCoords = setupAutocomplete("input-from", "dropdown-from", "#4CAF50");
+const getFromCoords = setupAutocomplete(
+  "input-from",
+  "dropdown-from",
+  "#4CAF50",
+);
 const getToCoords = setupAutocomplete("input-to", "dropdown-to", "#F44336");
 
-// ===== ГЕОЛОКАЦИЯ (Моё местоположение) =====
+// ГЕОЛОКАЦИЯ (Моё местоположение)
 
 // Обработчики кнопок геолокации
 function setupGeolocation(inputId, buttonId, dropdownId, markerColor) {
@@ -907,8 +984,12 @@ function setupGeolocation(inputId, buttonId, dropdownId, markerColor) {
       const lng = position.coords.longitude;
 
       // Проверяем что пользователь в Семею
-      if (lat < SEMEY_BOUNDS.minLat || lat > SEMEY_BOUNDS.maxLat ||
-          lng < SEMEY_BOUNDS.minLng || lng > SEMEY_BOUNDS.maxLng) {
+      if (
+        lat < SEMEY_BOUNDS.minLat ||
+        lat > SEMEY_BOUNDS.maxLat ||
+        lng < SEMEY_BOUNDS.minLng ||
+        lng > SEMEY_BOUNDS.maxLng
+      ) {
         showMapToast("Вы находитесь за пределами Семея");
         button.classList.remove("loading");
         button.disabled = false;
@@ -917,14 +998,15 @@ function setupGeolocation(inputId, buttonId, dropdownId, markerColor) {
 
       // Обратное геокодирование
       const address = await reverseGeocode(lat, lng);
-      const displayName = address.name || address.address || "Моё местоположение";
+      const displayName =
+        address.name || address.address || "Моё местоположение";
 
       // Используем новый метод set() для установки координат и обновления UI
-      const coordSetter = inputId === "input-from" ? getFromCoords.set : getToCoords.set;
+      const coordSetter =
+        inputId === "input-from" ? getFromCoords.set : getToCoords.set;
       coordSetter({ lat, lng }, displayName);
 
       showMapToast(`Местоположение определено: ${address.address || "Семей"}`);
-
     } catch (error) {
       console.error("Ошибка геолокации:", error);
       let message = "Не удалось определить местоположение";
@@ -941,57 +1023,62 @@ function setupGeolocation(inputId, buttonId, dropdownId, markerColor) {
   });
 }
 
-setupGeolocation("input-from", "geolocate-from-btn", "dropdown-from", "#4CAF50");
+setupGeolocation(
+  "input-from",
+  "geolocate-from-btn",
+  "dropdown-from",
+  "#4CAF50",
+);
 setupGeolocation("input-to", "geolocate-to-btn", "dropdown-to", "#F44336");
 
-// ===== УПРАВЛЕНИЕ РАЙОНАМИ =====
-const districtsModal = document.getElementById('districts-modal');
-const manageBtn = document.getElementById('manage-districts-btn');
-const closeBtn = document.querySelector('.close-modal-btn');
-const saveBtn = document.getElementById('save-districts-btn');
-const resetBtn = document.getElementById('reset-districts-btn');
-const districtsList = document.getElementById('districts-list');
+// УПРАВЛЕНИЕ РАЙОНАМИ
+const districtsModal = document.getElementById("districts-modal");
+const manageBtn = document.getElementById("manage-districts-btn");
+const closeBtn = document.querySelector(".close-modal-btn");
+const saveBtn = document.getElementById("save-districts-btn");
+const resetBtn = document.getElementById("reset-districts-btn");
+const districtsList = document.getElementById("districts-list");
 
 let originalDistricts = [];
 
 // Открытие модального окна
-manageBtn.addEventListener('click', async () => {
+manageBtn.addEventListener("click", async () => {
   await loadDistrictsForEdit();
-  districtsModal.classList.remove('hidden');
+  districtsModal.classList.remove("hidden");
 });
 
 // Закрытие модального окна
-closeBtn.addEventListener('click', () => {
-  districtsModal.classList.add('hidden');
+closeBtn.addEventListener("click", () => {
+  districtsModal.classList.add("hidden");
 });
 
 // Закрытие при клике вне модального окна
-districtsModal.addEventListener('click', (e) => {
+districtsModal.addEventListener("click", (e) => {
   if (e.target === districtsModal) {
-    districtsModal.classList.add('hidden');
+    districtsModal.classList.add("hidden");
   }
 });
 
 // Загрузка районов для редактирования
 async function loadDistrictsForEdit() {
   try {
-    const response = await fetch('http://localhost:8000/api/districts');
+    const response = await fetch("http://localhost:8000/api/districts");
     const districts = await response.json();
 
     originalDistricts = JSON.parse(JSON.stringify(districts)); // Глубокое копирование
 
-    districtsList.innerHTML = '';
+    districtsList.innerHTML = "";
 
-    districts.forEach(district => {
-      const item = document.createElement('div');
-      item.className = 'district-item';
+    districts.forEach((district) => {
+      const item = document.createElement("div");
+      item.className = "district-item";
       item.dataset.id = district.id;
 
       item.innerHTML = `
         <div class="district-item-header">
           <div class="district-item-name">${district.name}</div>
         </div>
-        <div class="district-item-description">${district.description || ''}</div>
+        <div class="district-item-description">${district.description || ""}</div>
         <div class="danger-level-control">
           <span class="danger-level-label">Уровень опасности:</span>
           <input
@@ -1008,10 +1095,10 @@ async function loadDistrictsForEdit() {
         </div>
       `;
 
-      const input = item.querySelector('.danger-level-input');
-      const preview = item.querySelector('.danger-level-preview');
+      const input = item.querySelector(".danger-level-input");
+      const preview = item.querySelector(".danger-level-preview");
 
-      input.addEventListener('input', (e) => {
+      input.addEventListener("input", (e) => {
         const value = parseInt(e.target.value) || 1;
         const clampedValue = Math.max(1, Math.min(10, value));
         preview.textContent = clampedValue;
@@ -1021,64 +1108,69 @@ async function loadDistrictsForEdit() {
       districtsList.appendChild(item);
     });
   } catch (error) {
-    console.error('Ошибка загрузки районов:', error);
-    alert('Не удалось загрузить районы');
+    console.error("Ошибка загрузки районов:", error);
+    alert("Не удалось загрузить районы");
   }
 }
 
 // Сохранение изменений
-saveBtn.addEventListener('click', async () => {
-  const inputs = districtsList.querySelectorAll('.danger-level-input');
+saveBtn.addEventListener("click", async () => {
+  const inputs = districtsList.querySelectorAll(".danger-level-input");
   const updates = {};
 
-  inputs.forEach(input => {
+  inputs.forEach((input) => {
     const districtId = input.dataset.districtId;
     const value = parseInt(input.value) || 1;
     const clampedValue = Math.max(1, Math.min(10, value));
 
     // Проверяем, изменилось ли значение
-    const original = originalDistricts.find(d => d.id === districtId);
+    const original = originalDistricts.find((d) => d.id === districtId);
     if (original && original.danger_level !== clampedValue) {
       updates[districtId] = clampedValue;
     }
   });
 
   if (Object.keys(updates).length === 0) {
-    alert('Нет изменений для сохранения');
-    districtsModal.classList.add('hidden');
+    alert("Нет изменений для сохранения");
+    districtsModal.classList.add("hidden");
     return;
   }
 
   try {
-    const response = await fetch('http://localhost:8000/api/districts/batch-update', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      "http://localhost:8000/api/districts/batch-update",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updates),
       },
-      body: JSON.stringify(updates)
-    });
+    );
 
     if (response.ok) {
       const result = await response.json();
       alert(`Успешно обновлено районов: ${result.updated}`);
-      districtsModal.classList.add('hidden');
+      districtsModal.classList.add("hidden");
 
       // Перезагружаем районы на карте
       await loadDistricts();
     } else {
-      throw new Error('Ошибка сохранения');
+      throw new Error("Ошибка сохранения");
     }
   } catch (error) {
-    console.error('Ошибка сохранения:', error);
-    alert('Не удалось сохранить изменения');
+    console.error("Ошибка сохранения:", error);
+    alert("Не удалось сохранить изменения");
   }
 });
 
 // Сброс изменений
-resetBtn.addEventListener('click', () => {
-  originalDistricts.forEach(original => {
-    const input = districtsList.querySelector(`[data-district-id="${original.id}"]`);
-    const preview = input.parentElement.querySelector('.danger-level-preview');
+resetBtn.addEventListener("click", () => {
+  originalDistricts.forEach((original) => {
+    const input = districtsList.querySelector(
+      `[data-district-id="${original.id}"]`,
+    );
+    const preview = input.parentElement.querySelector(".danger-level-preview");
 
     if (input) {
       input.value = original.danger_level;
@@ -1088,10 +1180,10 @@ resetBtn.addEventListener('click', () => {
   });
 });
 
-// ===== ИНИЦИАЛИЗАЦИЯ =====
+// ИНИЦИАЛИЗАЦИЯ
 // Ждем загрузки DOM, затем инициализируем карту и загружаем данные
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startApp);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp);
 } else {
   // DOM уже загружен
   startApp();

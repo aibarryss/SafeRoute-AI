@@ -18,10 +18,9 @@ from ml.danger_predictor import DangerPredictor
 
 logger = logging.getLogger(__name__)
 
-# Загрузить переменные окружения из .env
+
 load_dotenv()
 
-# Настройка logging: формат и уровень для всего приложения
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -32,7 +31,7 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: загрузить данные зон из JSON и ML модель."""
-    # Загрузка зон
+ 
     zones_path = Path(__file__).parent / "data" / "semey_zones.json"
     with open(zones_path, "r", encoding="utf-8") as f:
         raw_zones = json.load(f)
@@ -40,7 +39,7 @@ async def lifespan(app: FastAPI):
     set_zones(zones)
     logger.info("Zagruzheno %d zon opasnosti", len(zones))
 
-    # Загрузка ML модели
+   
     try:
         predictor = DangerPredictor(cache_enabled=True)
         app.state.predictor = predictor
@@ -50,7 +49,7 @@ async def lifespan(app: FastAPI):
         logger.warning("ML модель не найдена: %s", e)
         app.state.predictor = None
 
-    # Загрузка районов города
+  
     districts_path = Path(__file__).parent / "data" / "districts.json"
     with open(districts_path, "r", encoding="utf-8") as f:
         raw_districts = json.load(f)
@@ -58,13 +57,13 @@ async def lifespan(app: FastAPI):
     set_districts(districts)
     logger.info("Загружено %d районов города", len(districts))
 
-    # Передаём районы в ML predictor для привязки к реальным границам
+   
     if app.state.predictor:
         app.state.predictor.set_districts([d.model_dump() for d in districts])
         logger.info("Данные районов переданы в ML predictor")
 
     yield
-    # Shutdown: очистка ресурсов (если нужна)
+   
 
 
 app = FastAPI(
@@ -74,7 +73,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — динамическая конфигурация для dev и production
+
 ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "")
 if ALLOWED_ORIGINS_RAW:
     ALLOWED_ORIGINS = [o.strip() for o in ALLOWED_ORIGINS_RAW.split(",") if o.strip()]
@@ -98,7 +97,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
-# Подключить маршруты
+
 app.include_router(router)
 
 

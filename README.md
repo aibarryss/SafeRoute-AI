@@ -39,13 +39,13 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Frontend (Vercel)                         │
+│                        Frontend (Vercel)                        │
 │   HTML + JavaScript + 2GIS MapGL                                │
 └─────────────────────────────┬───────────────────────────────────┘
                               │ HTTP API
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Backend (Railway)                           │
+│                      Backend (Railway)                          │
 │   FastAPI + Uvicorn                                             │
 │   ├── ML Model (Gradient Boosting)                              │
 │   ├── District Management                                       │

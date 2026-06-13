@@ -478,10 +478,10 @@ def calculate_danger_score_with_ml(
     if not route:
         return 0.0
 
-    # 1. Zones score (статический метод)
+   
     zones_score = calculate_danger_score(route, zones)
 
-    # 2. ML predictions для каждой точки маршрута
+   
     ml_predictions = []
     for point in route:
         try:
@@ -493,13 +493,13 @@ def calculate_danger_score_with_ml(
             )
             ml_predictions.append(result.danger_level)
         except Exception as e:
-            # Если ML предсказание не удалось, используем zones_score
+           
             logger.warning("ML prediction failed for point (%.4f, %.4f): %s", point.lat, point.lng, e)
             ml_predictions.append(zones_score)
 
     ml_score = sum(ml_predictions) / len(ml_predictions) if ml_predictions else 0.0
 
-    # 3. Комбинация: 40% zones + 60% ML
+   
     combined = 0.4 * zones_score + 0.6 * ml_score
 
     return round(min(combined, 10.0), 2)
@@ -538,11 +538,11 @@ def analyze_route_zones(
     return zones_avoided, zones_nearby
 
 
-# Кэш для OSRM маршрутов (в памяти)
+
 _osrm_cache: Dict[str, List[Coordinate]] = {}
 OSRM_CACHE_SIZE = 100
 
-# Маппинг режимов на OSRM профили
+
 OSRM_PROFILES = {
     "car": "driving",
     "child": "walking",      # Ребёнок идёт пешком
@@ -562,19 +562,19 @@ async def get_osrm_route(start: Coordinate, end: Coordinate, mode: str = "car", 
     Returns:
         Список координат маршрута или None
     """
-    # ВАЖНО: ключ кэша включает режим — иначе вернётся автомобильный маршрут для ребёнка
+    
     profile = OSRM_PROFILES.get(mode, "driving")
     cache_key = f"{mode}:{round(start.lat, 4)},{round(start.lng, 4)}->{round(end.lat, 4)},{round(end.lng, 4)}"
 
-    # Проверяем кэш
+   
     if cache_key in _osrm_cache:
         logger.debug("OSRM cache hit for %s", cache_key)
         return _osrm_cache[cache_key]
 
-    # Попытки получить маршрут с retry
+  
     for attempt in range(max_retries):
         try:
-            # OSRM demo server — используем профиль в зависимости от режима
+           
             url = f"https://router.project-osrm.org/route/v1/{profile}/{start.lng},{start.lat};{end.lng},{end.lat}?overview=full&geometries=geojson"
 
             async with httpx.AsyncClient(timeout=8.0) as client:
@@ -584,17 +584,17 @@ async def get_osrm_route(start: Coordinate, end: Coordinate, mode: str = "car", 
                     data = response.json()
 
                     if data.get("code") == "Ok" and data.get("routes"):
-                        # Извлекаем координаты из GeoJSON geometry
+                       
                         geometry = data["routes"][0]["geometry"]["coordinates"]
-                        # OSRM возвращает [lng, lat], нужно [lat, lng]
+                        
                         route_coords = [
                             Coordinate(lat=coord[1], lng=coord[0])
                             for coord in geometry
                         ]
 
-                        # Сохраняем в кэш (с ограничением размера)
+                        
                         if len(_osrm_cache) >= OSRM_CACHE_SIZE:
-                            # Удаляем самый старый элемент
+                            
                             oldest_key = next(iter(_osrm_cache))
                             del _osrm_cache[oldest_key]
 
@@ -656,7 +656,7 @@ def find_districts_on_route(
             if district.id in seen_ids:
                 continue
 
-            # Используем ray casting для точной проверки попадания в полигон
+           
             if _point_in_polygon(point.lat, point.lng, district.polygon):
                 districts_on_route.append({
                     "id": district.id,
