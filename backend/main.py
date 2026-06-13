@@ -73,23 +73,27 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — restrict to configured origins only
-import os
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
-    "http://localhost:5500",      # Live Server VS Code
-    "http://127.0.0.1:5500",     # Альтернативный адрес
-    "http://localhost:8080",      # Альтернативный порт
-    "http://127.0.0.1:8080",
-    "http://localhost:3000",      # React dev server
-    "http://127.0.0.1:3000",
-]
+# CORS — динамическая конфигурация для dev и production
+ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "")
+if ALLOWED_ORIGINS_RAW:
+    ALLOWED_ORIGINS = [o.strip() for o in ALLOWED_ORIGINS_RAW.split(",") if o.strip()]
+else:
+    ALLOWED_ORIGINS = [
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://saferoute-ai-production-f06b.up.railway.app",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH"],  # Only methods we use
-    allow_headers=["Content-Type", "Authorization"],  # Only headers we need
+    allow_methods=["GET", "POST", "PATCH"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Подключить маршруты

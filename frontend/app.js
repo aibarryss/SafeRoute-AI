@@ -1,5 +1,8 @@
 // ===== КОНФИГУРАЦИЯ =====
-const API_BASE = "http://localhost:8000";
+const IS_DEV = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const API_BASE = IS_DEV
+  ? "http://localhost:8000"
+  : "https://saferoute-ai-production-f06b.up.railway.app";
 const SEARCH_DEBOUNCE_MS = 250;
 
 // Текущий режим маршрута
@@ -9,7 +12,6 @@ let map = null; // Глобальная переменная карты
 
 // Получаем 2GIS ключ с бэкенда (с dev-only fallback)
 async function loadConfig() {
-  const IS_DEV = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   try {
     const response = await fetch(`${API_BASE}/api/config`);
     const config = await response.json();
